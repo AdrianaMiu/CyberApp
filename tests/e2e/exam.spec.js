@@ -74,3 +74,37 @@ test('reloading during an exam returns to setup without an error', async ({ page
   await expect(page.locator('#start')).toBeVisible();
   await expect(page.locator('[role="alert"]')).toHaveCount(0);
 });
+
+test('activating the skip link keeps the current view and moves focus to the content', async ({ page }) => {
+  await startExam(page);
+  const text = await page.locator('.question-text').innerText();
+  await page.locator('a.skip').focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.question-text')).toHaveText(text);
+  await expect(page.locator('#app')).toBeFocused();
+  expect(await page.evaluate(() => location.hash)).toBe('#/exam');
+});
+
+test('leaving a live exam asks for confirmation and cancelling keeps it going', async ({ page }) => {
+  await startExam(page);
+  const text = await page.locator('.question-text').innerText();
+  let dialogs = 0;
+  page.once('dialog', (d) => { dialogs += 1; d.dismiss(); });
+  await page.evaluate(() => { location.hash = '#/'; });
+  await expect(page.locator('.question-text')).toHaveText(text);
+  await expect.poll(() => page.evaluate(() => location.hash)).toBe('#/exam');
+  expect(dialogs).toBe(1);
+
+  page.once('dialog', (d) => d.accept());
+  await page.evaluate(() => { location.hash = '#/'; });
+  await expect(page.locator('h1')).toHaveText('CyberQuiz');
+});
+
+test('a finished exam can be left without any confirmation', async ({ page }) => {
+  await startExam(page);
+  for (let i = 0; i < eligible.length; i++) await page.locator('#next').click();
+  await expect(page.locator('h2.results-score')).toBeVisible();
+  page.on('dialog', () => { throw new Error('unexpected dialog'); });
+  await page.evaluate(() => { location.hash = '#/stats'; });
+  await expect(page.locator('h1')).toHaveText('Statistics');
+});

@@ -98,8 +98,9 @@ test('search finds questions by tag and opens one as a single-question run', asy
   await page.goto('/#/search');
   await page.locator('input[type="search"]').fill('triage');
   const results = page.locator('li.result');
-  await expect(results).toHaveCount(2);
-  await expect(results.first()).toContainText(/DLP|Incident/i);
+  // incident-response-0001 also has the tag but is scenario-chained, so only the dlp question is offered
+  await expect(results).toHaveCount(1);
+  await expect(results.first()).toContainText(/DLP/i);
   await results.first().locator('button.open-result').click();
   await expect(page.locator('.question-text')).toBeVisible();
   await expect(page.locator('.run-progress')).toContainText('1 / 1');
@@ -114,4 +115,10 @@ test('search with no match says so, and the query can come from the URL', async 
 test('the Report link is hidden while no repository slug is configured', async ({ page }) => {
   await startPractice(page, ['dlp']);
   await playRun(page, () => true, { after: async () => { await expect(page.getByRole('link', { name: 'Report a problem' })).toHaveCount(0); } });
+});
+
+test('search never offers open or scenario-chained questions', async ({ page }) => {
+  await page.goto('/#/search?q=containment');
+  await expect(page.locator('li.result')).toHaveCount(0);
+  await expect(page.locator('.search-none')).toBeVisible();
 });

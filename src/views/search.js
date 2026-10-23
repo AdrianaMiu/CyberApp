@@ -3,10 +3,12 @@ import { searchQuestions } from '../search.js';
 import { createSession } from '../session.js';
 import { renderRun } from './run.js';
 import { renderResults } from './results.js';
+import { isEligibleForPractice } from '../selection.js';
 
 export async function renderSearch(ctx, route) {
   const { t } = ctx;
-  const questions = await ctx.loader.loadAll();
+  // open and scenario-chained questions only make sense inside Scenario and Review mode (spec section 9)
+  const questions = (await ctx.loader.loadAll()).filter(isEligibleForPractice);
   const byId = new Map(questions.map((q) => [q.id, q]));
   const list = h('ul', { class: 'results-list' });
   const none = h('p', { class: 'search-none', role: 'status', hidden: true }, t('search.none'));

@@ -105,6 +105,7 @@ export async function renderExam(ctx) {
     function begin() {
       const picked = buildExam(questions, { count: Number(count.value) });
       const session = createSession({ mode: 'exam', questions: picked, store: ctx.store, perQuestionMs: PER_QUESTION_MS });
+      ctx.leaveGuard = t('exam.confirmLeave');
       body.replaceChildren(renderExamRun(ctx, session, finished));
     }
     note();
@@ -117,6 +118,7 @@ export async function renderExam(ctx) {
   }
 
   function finished(report) {
+    ctx.leaveGuard = null;
     const results = renderResults(ctx, report, byId, { onAgain: showSetup });
     if (report.expired) results.prepend(h('p', { class: 'notice expired-note', role: 'status' }, t('exam.expired')));
     body.replaceChildren(results);

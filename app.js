@@ -90,7 +90,30 @@ function showBanner(kind) {
     h('button', { type: 'button', class: 'btn primary', onclick: onReload }, ctx.t('banner.reload'))));
 }
 
+// The skip link must not reach the hash router ("#app" is not a route): move focus instead.
+document.querySelector('.skip').addEventListener('click', (e) => {
+  e.preventDefault();
+  main.focus();
+});
+
+// A live exam is lost when the view is replaced, so ask before leaving it.
+let shownHash = location.hash;
+let restoring = false;
+window.addEventListener('hashchange', () => {
+  if (restoring) {
+    restoring = false;
+    return;
+  }
+  if (ctx.leaveGuard && !window.confirm(ctx.leaveGuard)) {
+    restoring = true;
+    location.hash = shownHash;
+    return;
+  }
+  ctx.leaveGuard = null;
+  shownHash = location.hash;
+  render();
+});
+
 ctx.applySettings();
-window.addEventListener('hashchange', render);
 render();
 registerPwa({ loader, store, onUpdate: showBanner }).catch(() => {});

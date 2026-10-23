@@ -129,6 +129,9 @@ export const STRINGS = {
     'search.none': 'Nicio întrebare nu se potrivește.',
     'search.results': '{n} rezultate',
     'search.open': 'Exersează',
+    'banner.content': 'Conținut actualizat.',
+    'banner.shell': 'Este disponibilă o versiune nouă a aplicației.',
+    'banner.reload': 'Reîncarcă',
   },
   en: {
     'app.title': 'CyberQuiz',
@@ -260,6 +263,9 @@ export const STRINGS = {
     'search.none': 'No questions match.',
     'search.results': '{n} results',
     'search.open': 'Practice',
+    'banner.content': 'Content updated.',
+    'banner.shell': 'A new version of the app is available.',
+    'banner.reload': 'Reload',
   },
 };
 

@@ -10,6 +10,8 @@ import { renderReview } from './src/views/review.js';
 import { renderStats } from './src/views/stats.js';
 import { renderSettings } from './src/views/settings.js';
 import { renderSearch } from './src/views/search.js';
+import { registerPwa, applyShellUpdate } from './src/pwa.js';
+import { h } from './src/dom.js';
 import { renderNotFound, renderError } from './src/views/notfound.js';
 
 const TEXT_SCALES = [0.9, 1, 1.15, 1.3];
@@ -80,6 +82,15 @@ async function render() {
   window.scrollTo(0, 0);
 }
 
+function showBanner(kind) {
+  if (document.querySelector('.banner')) return;
+  const onReload = kind === 'shell' ? () => applyShellUpdate() : () => location.reload();
+  document.body.prepend(h('div', { class: 'banner', role: 'status', dataset: { kind } },
+    h('span', null, ctx.t(`banner.${kind}`)),
+    h('button', { type: 'button', class: 'btn primary', onclick: onReload }, ctx.t('banner.reload'))));
+}
+
 ctx.applySettings();
 window.addEventListener('hashchange', render);
 render();
+registerPwa({ loader, store, onUpdate: showBanner }).catch(() => {});

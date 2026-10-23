@@ -21,7 +21,7 @@ Questions live in `data/<domain>.json`, scenarios in `data/scenarios.json`, reti
 
 ## Report link
 
-The "Report a problem" link opens a prefilled GitHub issue. Set `REPO_SLUG` in `src/config.js` to `owner/repo` once the repository exists; the link stays hidden while it is empty.
+The "Report a problem" link opens a prefilled GitHub issue. `REPO_SLUG` in `src/config.js` names the repository that receives them (`AdrianaMiu/CyberApp`); leave it empty to hide the link.
 
 ## Deploy
 

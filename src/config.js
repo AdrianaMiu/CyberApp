@@ -1,5 +1,5 @@
-// Set to "owner/repo" once the GitHub repository exists; the Report link stays hidden while empty.
-export const REPO_SLUG = '';
+// GitHub repository that receives "Report a problem" issues; leave empty to hide the link.
+export const REPO_SLUG = 'AdrianaMiu/CyberApp';
 export const DATA_BASE = 'data/';
 export const PER_QUESTION_MS = 90000;
 

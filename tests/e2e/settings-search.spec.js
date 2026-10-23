@@ -112,9 +112,18 @@ test('search with no match says so, and the query can come from the URL', async 
   await expect(page.locator('.search-none')).toBeVisible();
 });
 
-test('the Report link is hidden while no repository slug is configured', async ({ page }) => {
+test('the Report link opens a prefilled issue on the configured repository', async ({ page }) => {
   await startPractice(page, ['dlp']);
-  await playRun(page, () => true, { after: async () => { await expect(page.getByRole('link', { name: 'Report a problem' })).toHaveCount(0); } });
+  await playRun(page, () => true, {
+    after: async (q) => {
+      const link = page.getByRole('link', { name: 'Report a problem' });
+      await expect(link).toHaveCount(1);
+      const href = await link.getAttribute('href');
+      expect(href.startsWith('https://github.com/AdrianaMiu/CyberApp/issues/new?')).toBe(true);
+      expect(decodeURIComponent(href)).toContain(`Report ${q.id}`);
+      await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    },
+  });
 });
 
 test('search never offers open or scenario-chained questions', async ({ page }) => {

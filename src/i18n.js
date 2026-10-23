@@ -85,6 +85,11 @@ export const STRINGS = {
     'results.missed': 'De reluat',
     'results.again': 'Reia',
     'results.home': 'Acasă',
+    'exam.save': 'Salvează răspunsul',
+    'exam.saved': 'Răspuns salvat. Rezultatul apare la final.',
+    'exam.pool': '{n} întrebări disponibile. Examenul va avea {m}.',
+    'exam.tooFew': 'Sunt necesare cel puțin {min} întrebări eligibile pentru un examen.',
+    'exam.expired': 'Timpul a expirat. Întrebările fără răspuns contează ca greșite.',
   },
   en: {
     'app.title': 'CyberQuiz',
@@ -172,6 +177,11 @@ export const STRINGS = {
     'results.missed': 'To revisit',
     'results.again': 'Start again',
     'results.home': 'Home',
+    'exam.save': 'Save answer',
+    'exam.saved': 'Answer saved. Your result appears at the end.',
+    'exam.pool': '{n} questions available. This exam will have {m}.',
+    'exam.tooFew': 'At least {min} eligible questions are needed for an exam.',
+    'exam.expired': 'Time is up. Unanswered questions count as wrong.',
   },
 };
 

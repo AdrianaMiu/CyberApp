@@ -160,3 +160,6 @@ table { border-collapse: collapse; width: 100%; background: var(--surface); }
 caption { text-align: left; font-weight: 600; padding: 8px 0; }
 th, td { border-bottom: 1px solid var(--border); padding: 8px; text-align: left; }
 .missed-list { padding-left: 1.25rem; }
+
+.timer { position: sticky; top: 0; z-index: 2; margin: 0 0 0.5rem; padding: 8px 0; background: var(--bg); font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
+.saved { color: var(--ok); font-weight: 600; }

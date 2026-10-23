@@ -6,6 +6,8 @@ import { renderHome } from './src/views/home.js';
 import { renderPractice } from './src/views/practice.js';
 import { renderExam } from './src/views/exam.js';
 import { renderScenarios } from './src/views/scenarios.js';
+import { renderReview } from './src/views/review.js';
+import { renderStats } from './src/views/stats.js';
 import { renderNotFound, renderError } from './src/views/notfound.js';
 
 const TEXT_SCALES = [0.9, 1, 1.15, 1.3];
@@ -48,6 +50,8 @@ const VIEWS = {
   exam: renderExam,
   scenarios: renderScenarios,
   scenario: renderScenarios,
+  review: renderReview,
+  stats: renderStats,
   notfound: renderNotFound,
 };
 

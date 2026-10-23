@@ -167,3 +167,8 @@ th, td { border-bottom: 1px solid var(--border); padding: 8px; text-align: left;
 .unavailable { opacity: 0.75; border-style: dashed; }
 .artifacts pre { margin: 0.5rem 0; }
 .debrief { margin-top: 1.5rem; }
+
+.bars { list-style: none; margin: 0; padding: 0; }
+.bars li { display: grid; grid-template-columns: 1fr; gap: 4px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.stat-value { color: var(--muted); font-variant-numeric: tabular-nums; }
+.scenario-context { margin-top: 0; }

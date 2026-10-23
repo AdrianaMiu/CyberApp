@@ -163,3 +163,7 @@ th, td { border-bottom: 1px solid var(--border); padding: 8px; text-align: left;
 
 .timer { position: sticky; top: 0; z-index: 2; margin: 0 0 0.5rem; padding: 8px 0; background: var(--bg); font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
 .saved { color: var(--ok); font-weight: 600; }
+
+.unavailable { opacity: 0.75; border-style: dashed; }
+.artifacts pre { margin: 0.5rem 0; }
+.debrief { margin-top: 1.5rem; }

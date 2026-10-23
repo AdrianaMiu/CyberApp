@@ -5,6 +5,7 @@ import { t as translate, detectLang } from './src/i18n.js';
 import { renderHome } from './src/views/home.js';
 import { renderPractice } from './src/views/practice.js';
 import { renderExam } from './src/views/exam.js';
+import { renderScenarios } from './src/views/scenarios.js';
 import { renderNotFound, renderError } from './src/views/notfound.js';
 
 const TEXT_SCALES = [0.9, 1, 1.15, 1.3];
@@ -45,6 +46,8 @@ const VIEWS = {
   home: renderHome,
   practice: renderPractice,
   exam: renderExam,
+  scenarios: renderScenarios,
+  scenario: renderScenarios,
   notfound: renderNotFound,
 };
 

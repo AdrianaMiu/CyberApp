@@ -1,0 +1,357 @@
+{
+  "domain": "siem",
+  "questions": [
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "brute-force",
+        "windows"
+      ],
+      "scenario_id": null,
+      "references": [
+        {
+          "title": "Windows security events",
+          "url": "https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/security-auditing-overview"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "siem-0001",
+      "domain": "siem",
+      "layer": "L1",
+      "sector": "mssp-consulting",
+      "difficulty": "intermediate",
+      "type": "log-analysis",
+      "attack": [
+        "T1110.003"
+      ],
+      "question": "What does this sequence most likely indicate?",
+      "context": "02:09-02:11 EventID=4625 TargetUserName=admin IpAddress=203.0.113.50 LogonType=3 (38 events)\n02:12:41 EventID=4624 TargetUserName=admin IpAddress=203.0.113.50 LogonType=3",
+      "options": [
+        {
+          "id": "a",
+          "text": "Repeated network logon failures followed by a success from the same IP, consistent with password guessing"
+        },
+        {
+          "id": "b",
+          "text": "A user mistyping a password once"
+        },
+        {
+          "id": "c",
+          "text": "Kerberos ticket expiry"
+        },
+        {
+          "id": "d",
+          "text": "A scheduled task starting"
+        }
+      ],
+      "answer": [
+        "a"
+      ],
+      "explanation": {
+        "correct": "38 failed network logons (4625) then a success (4624) from one address is the classic guessing pattern.",
+        "distractors": {
+          "b": "One mistyped password would not generate dozens of failures.",
+          "c": "Ticket expiry does not produce 4625 bursts from a remote IP.",
+          "d": "Scheduled tasks log as different events."
+        }
+      }
+    },
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "kql",
+        "sentinel"
+      ],
+      "scenario_id": null,
+      "references": [
+        {
+          "title": "NIST SP 800-61r3",
+          "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "siem-0002",
+      "domain": "siem",
+      "layer": "Engineering",
+      "sector": "tech-vendor",
+      "difficulty": "advanced",
+      "type": "log-analysis",
+      "attack": [
+        "T1078"
+      ],
+      "question": "What is this detection query trying to find?",
+      "context": "SigninLogs\n| where ResultType == 0\n| summarize countries = dcount(Location) by UserPrincipalName, bin(TimeGenerated, 1h)\n| where countries > 2",
+      "options": [
+        {
+          "id": "a",
+          "text": "Accounts with successful sign-ins from more than two countries within one hour"
+        },
+        {
+          "id": "b",
+          "text": "Accounts with failed MFA challenges"
+        },
+        {
+          "id": "c",
+          "text": "Newly registered MFA devices"
+        },
+        {
+          "id": "d",
+          "text": "Disabled accounts that still sign in"
+        }
+      ],
+      "answer": [
+        "a"
+      ],
+      "explanation": {
+        "correct": "ResultType 0 is success; dcount(Location) per hour above two flags implausible geographic spread.",
+        "distractors": {
+          "b": "The query filters on successful results, not MFA failures.",
+          "c": "Device registration is another log table.",
+          "d": "Nothing in the query checks account state."
+        }
+      }
+    },
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "nist"
+      ],
+      "scenario_id": null,
+      "references": [
+        {
+          "title": "NIST SP 800-61r3",
+          "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "siem-0003",
+      "domain": "siem",
+      "layer": "L1",
+      "sector": "general",
+      "difficulty": "basic",
+      "type": "ordering",
+      "question": "Put the NIST incident response phases in order.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Containment, eradication and recovery"
+        },
+        {
+          "id": "b",
+          "text": "Preparation"
+        },
+        {
+          "id": "c",
+          "text": "Post-incident activity"
+        },
+        {
+          "id": "d",
+          "text": "Detection and analysis"
+        }
+      ],
+      "answer": [
+        "b",
+        "d",
+        "a",
+        "c"
+      ],
+      "explanation": {
+        "correct": "Preparation, then detection and analysis, then containment/eradication/recovery, then lessons learned.",
+        "distractors": {}
+      }
+    },
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "pipeline"
+      ],
+      "scenario_id": null,
+      "references": [
+        {
+          "title": "NIST SP 800-61r3",
+          "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "siem-0004",
+      "domain": "siem",
+      "layer": "L2",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "ordering",
+      "question": "Order the stages a log event passes through in a SIEM pipeline.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Correlate"
+        },
+        {
+          "id": "b",
+          "text": "Collect"
+        },
+        {
+          "id": "c",
+          "text": "Normalise"
+        },
+        {
+          "id": "d",
+          "text": "Parse"
+        }
+      ],
+      "answer": [
+        "b",
+        "d",
+        "c",
+        "a"
+      ],
+      "explanation": {
+        "correct": "Events are collected, parsed into fields, normalised to a common schema, then correlated.",
+        "distractors": {}
+      }
+    },
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "event-ids"
+      ],
+      "scenario_id": null,
+      "references": [
+        {
+          "title": "Windows security events",
+          "url": "https://learn.microsoft.com/en-us/windows/security/threat-protection/auditing/security-auditing-overview"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "siem-0005",
+      "domain": "siem",
+      "layer": "L1",
+      "sector": "mssp-consulting",
+      "difficulty": "intermediate",
+      "type": "matching",
+      "question": "Match each Windows Security event ID to what it records.",
+      "options": {
+        "left": [
+          {
+            "id": "l1",
+            "text": "4624"
+          },
+          {
+            "id": "l2",
+            "text": "4688"
+          },
+          {
+            "id": "l3",
+            "text": "1102"
+          }
+        ],
+        "right": [
+          {
+            "id": "r1",
+            "text": "Successful logon"
+          },
+          {
+            "id": "r2",
+            "text": "Process creation"
+          },
+          {
+            "id": "r3",
+            "text": "Audit log cleared"
+          },
+          {
+            "id": "r4",
+            "text": "Scheduled task created"
+          }
+        ]
+      },
+      "answer": {
+        "l1": "r1",
+        "l2": "r2",
+        "l3": "r3"
+      },
+      "explanation": {
+        "correct": "4624 is a successful logon, 4688 a new process, 1102 the Security log being cleared.",
+        "distractors": {
+          "l3": "1102 is the audit log cleared event; task creation is 4698."
+        }
+      }
+    },
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "artefacts"
+      ],
+      "scenario_id": null,
+      "references": [
+        {
+          "title": "NIST SP 800-61r3",
+          "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "siem-0006",
+      "domain": "siem",
+      "layer": "L3",
+      "sector": "general",
+      "difficulty": "advanced",
+      "type": "matching",
+      "question": "Match each Windows artefact to what it can prove.",
+      "options": {
+        "left": [
+          {
+            "id": "l1",
+            "text": "USBSTOR registry key"
+          },
+          {
+            "id": "l2",
+            "text": "Prefetch file"
+          },
+          {
+            "id": "l3",
+            "text": "LNK file"
+          }
+        ],
+        "right": [
+          {
+            "id": "r1",
+            "text": "A USB device was attached"
+          },
+          {
+            "id": "r2",
+            "text": "A program was executed"
+          },
+          {
+            "id": "r3",
+            "text": "A file was opened"
+          },
+          {
+            "id": "r4",
+            "text": "A website was visited"
+          }
+        ]
+      },
+      "answer": {
+        "l1": "r1",
+        "l2": "r2",
+        "l3": "r3"
+      },
+      "explanation": {
+        "correct": "USBSTOR lists attached USB storage, Prefetch records executions, LNK files show files opened.",
+        "distractors": {
+          "l2": "Prefetch records program execution, not file opening."
+        }
+      }
+    }
+  ]
+}

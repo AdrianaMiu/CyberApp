@@ -1,0 +1,28 @@
+{
+  "bankVersion": "test.1",
+  "target": 800,
+  "domains": [
+    {
+      "id": "dlp",
+      "file": "dlp.json",
+      "authored": 8,
+      "served": 6
+    },
+    {
+      "id": "siem",
+      "file": "siem.json",
+      "authored": 6,
+      "served": 6
+    },
+    {
+      "id": "incident-response",
+      "file": "incident-response.json",
+      "authored": 6,
+      "served": 6
+    }
+  ],
+  "scenarios": {
+    "file": "scenarios.json",
+    "count": 1
+  }
+}

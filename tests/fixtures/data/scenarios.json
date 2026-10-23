@@ -1,0 +1,21 @@
+{
+  "scenarios": [
+    {
+      "id": "scn-001",
+      "title": "IBAN file sent to a personal Gmail at night",
+      "narrative": "You are an L1 analyst on a bank data leakage monitoring team.\nAt 23:40 a High DLP alert fires for rule \"Customer IBAN - external email\".\nA Finance user sent an XLSX with 2,300 IBANs to an @gmail.com address.\nThe message was delivered and the file is labelled Confidential - Customer.\nThe shift manager asks whether this is just another Finance false positive.",
+      "artifacts": [
+        "DLP alert: rule=Customer IBAN - external email; severity=High; matches=2300; label=Confidential - Customer",
+        "Email: delivered=true; recipient=@gmail.com; attachment=clients_q3.xlsx (1.8 MB)",
+        "History: no similar alerts for this user in 90 days; no approval ticket found"
+      ],
+      "questions": [
+        "incident-response-0001",
+        "incident-response-0002",
+        "incident-response-0003",
+        "incident-response-0004"
+      ],
+      "debrief": "A senior analyst validates the alert from logged metadata before acting.\nThey do not contact the user until the picture is complete.\nA personal recipient domain makes the alert real regardless of the sender team.\nThey preserve the email and logs, decide containment proportionately and keep the incident manager informed."
+    }
+  ]
+}

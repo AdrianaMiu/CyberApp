@@ -1,0 +1,415 @@
+{
+  "domain": "dlp",
+  "questions": [
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "monitor-mode",
+        "tuning"
+      ],
+      "scenario_id": null,
+      "references": [
+        {
+          "title": "Microsoft Purview DLP overview",
+          "url": "https://learn.microsoft.com/en-us/purview/dlp-learn-about-dlp"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "dlp-0001",
+      "domain": "dlp",
+      "layer": "L1",
+      "sector": "general",
+      "difficulty": "basic",
+      "type": "single",
+      "question": "What is the main purpose of running a DLP policy in monitor-only mode?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Block every transfer that matches"
+        },
+        {
+          "id": "b",
+          "text": "Log matches so analysts can tune the policy before enforcement"
+        },
+        {
+          "id": "c",
+          "text": "Encrypt all matched files"
+        },
+        {
+          "id": "d",
+          "text": "Delete matched files automatically"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "Monitor mode records matches without blocking, which exposes false positives before enforcement starts.",
+        "distractors": {
+          "a": "Blocking is enforcement mode, not monitor mode.",
+          "c": "Encryption is a separate protection action.",
+          "d": "Deleting data is not a standard DLP monitor action."
+        }
+      }
+    },
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "injection",
+        "ticketing"
+      ],
+      "scenario_id": null,
+      "references": [
+        {
+          "title": "Microsoft Purview DLP overview",
+          "url": "https://learn.microsoft.com/en-us/purview/dlp-learn-about-dlp"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "dlp-0002",
+      "domain": "dlp",
+      "layer": "L2",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "single",
+      "question": "A ticket describing a DLP alert contains the text <img src=x onerror=\"window.__pwned=1\"> pasted by a user. How should the analyst treat it?",
+      "context": "ticket body: <img src=x onerror=\"window.__pwned=1\">",
+      "options": [
+        {
+          "id": "a",
+          "text": "Render it as HTML so the image is visible: <img src=x onerror=\"window.__pwned=1\">"
+        },
+        {
+          "id": "b",
+          "text": "Treat it as untrusted text and never render or execute it as markup"
+        },
+        {
+          "id": "c",
+          "text": "Run it in the browser console to see what it does"
+        },
+        {
+          "id": "d",
+          "text": "Ignore the alert because the ticket looks corrupted"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "User-supplied text is untrusted data; showing it literally avoids executing attacker-controlled markup.",
+        "distractors": {
+          "a": "Rendering untrusted markup can run script in the analyst browser.",
+          "c": "Executing unknown content is unsafe and answers nothing about the alert.",
+          "d": "Odd text in a ticket does not invalidate the underlying alert."
+        }
+      }
+    },
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "channels"
+      ],
+      "scenario_id": null,
+      "references": [
+        {
+          "title": "Microsoft Purview DLP overview",
+          "url": "https://learn.microsoft.com/en-us/purview/dlp-learn-about-dlp"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "dlp-0003",
+      "domain": "dlp",
+      "layer": "L1",
+      "sector": "tech-vendor",
+      "difficulty": "intermediate",
+      "type": "multi",
+      "question": "Which of these are common channels monitored by DLP?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Email attachments"
+        },
+        {
+          "id": "b",
+          "text": "USB storage"
+        },
+        {
+          "id": "c",
+          "text": "Cloud sync clients"
+        },
+        {
+          "id": "d",
+          "text": "Monitor brightness settings"
+        }
+      ],
+      "answer": [
+        "a",
+        "b",
+        "c"
+      ],
+      "explanation": {
+        "correct": "Email, removable media and cloud sync are the classic exfiltration channels covered by DLP.",
+        "distractors": {
+          "d": "Display settings carry no data out of the organisation."
+        }
+      }
+    },
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "gdpr",
+        "dora",
+        "notification"
+      ],
+      "scenario_id": null,
+      "references": [
+        {
+          "title": "NIST SP 800-61r3",
+          "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+        },
+        {
+          "title": "MITRE ATT&CK Exfiltration",
+          "url": "https://attack.mitre.org/tactics/TA0010/"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "dlp-0004",
+      "domain": "dlp",
+      "layer": "Governance",
+      "sector": "finance",
+      "difficulty": "advanced",
+      "type": "multi",
+      "attack": [
+        "T1048.003"
+      ],
+      "question": "Customer IBANs were emailed to an external recipient. Which statements about regulatory handling are correct?",
+      "options": [
+        {
+          "id": "a",
+          "text": "The 72-hour GDPR clock starts when the controller becomes aware of the breach"
+        },
+        {
+          "id": "b",
+          "text": "Notifying the supervisory authority is always required, whatever the risk"
+        },
+        {
+          "id": "c",
+          "text": "The breach must be documented internally even when no notification is made"
+        },
+        {
+          "id": "d",
+          "text": "DORA incident reporting never applies to banks"
+        }
+      ],
+      "answer": [
+        "a",
+        "c"
+      ],
+      "explanation": {
+        "correct": "GDPR art. 33 starts the 72 hours at awareness and requires documentation of every breach.",
+        "distractors": {
+          "b": "Notification is not required when the breach is unlikely to result in a risk to individuals.",
+          "d": "DORA applies to financial entities for major ICT-related incidents."
+        }
+      }
+    },
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "false-positive"
+      ],
+      "scenario_id": null,
+      "references": [
+        {
+          "title": "NIST SP 800-61r3",
+          "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "dlp-0005",
+      "domain": "dlp",
+      "layer": "L1",
+      "sector": "general",
+      "difficulty": "basic",
+      "type": "truefalse",
+      "question": "A DLP false positive is an alert where the policy matched but no real policy violation occurred.",
+      "options": [
+        {
+          "id": "a",
+          "text": "True"
+        },
+        {
+          "id": "b",
+          "text": "False"
+        }
+      ],
+      "answer": [
+        "a"
+      ],
+      "explanation": {
+        "correct": "That is the definition: the pattern matched, the context was legitimate.",
+        "distractors": {
+          "b": "The statement is the standard definition, so it is true."
+        }
+      }
+    },
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "false-positive",
+        "triage"
+      ],
+      "scenario_id": null,
+      "references": [
+        {
+          "title": "NIST SP 800-61r3",
+          "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "dlp-0006",
+      "domain": "dlp",
+      "layer": "L2",
+      "sector": "mssp-consulting",
+      "difficulty": "intermediate",
+      "type": "truefalse",
+      "question": "It is acceptable to close an alert as a false positive only because the sender works in a team that handles that data type every day.",
+      "options": [
+        {
+          "id": "a",
+          "text": "True"
+        },
+        {
+          "id": "b",
+          "text": "False"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "Role alone does not justify closure; the destination, volume and approval still need checking.",
+        "distractors": {
+          "a": "Handling the data does not make sending it to an unapproved external destination legitimate."
+        }
+      }
+    },
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "metadata"
+      ],
+      "scenario_id": null,
+      "references": [
+        {
+          "title": "Microsoft Purview DLP overview",
+          "url": "https://learn.microsoft.com/en-us/purview/dlp-learn-about-dlp"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": false,
+      "id": "dlp-0007",
+      "domain": "dlp",
+      "layer": "L2",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "single",
+      "question": "Which piece of alert metadata best confirms whether an emailed file actually left the organisation?",
+      "options": [
+        {
+          "id": "a",
+          "text": "The delivery status of the message"
+        },
+        {
+          "id": "b",
+          "text": "The file name"
+        },
+        {
+          "id": "c",
+          "text": "The sender display name"
+        },
+        {
+          "id": "d",
+          "text": "The policy description"
+        }
+      ],
+      "answer": [
+        "a"
+      ],
+      "explanation": {
+        "correct": "Delivery status distinguishes delivered from quarantined or blocked messages.",
+        "distractors": {
+          "b": "A name says nothing about delivery.",
+          "c": "A display name says nothing about delivery.",
+          "d": "A description is static text."
+        }
+      }
+    },
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "ocr"
+      ],
+      "scenario_id": null,
+      "references": [
+        {
+          "title": "Microsoft Purview DLP overview",
+          "url": "https://learn.microsoft.com/en-us/purview/dlp-learn-about-dlp"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "dlp-0008",
+      "domain": "dlp",
+      "layer": "Engineering",
+      "sector": "general",
+      "difficulty": "basic",
+      "type": "single",
+      "disputed": true,
+      "question": "What is OCR used for in a DLP product?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Detecting sensitive text inside images"
+        },
+        {
+          "id": "b",
+          "text": "Encrypting disks"
+        },
+        {
+          "id": "c",
+          "text": "Resetting passwords"
+        },
+        {
+          "id": "d",
+          "text": "Scanning network ports"
+        }
+      ],
+      "answer": [
+        "a"
+      ],
+      "explanation": {
+        "correct": "OCR extracts text from images so content rules can match it.",
+        "distractors": {
+          "b": "Disk encryption is unrelated.",
+          "c": "Password resets are unrelated.",
+          "d": "Port scanning is unrelated."
+        }
+      }
+    }
+  ]
+}

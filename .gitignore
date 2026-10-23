@@ -1,0 +1,7 @@
+node_modules/
+_site/
+playwright-report/
+test-results/
+precache.json
+lighthouse.json
+.superpowers/

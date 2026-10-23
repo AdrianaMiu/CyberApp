@@ -5,3 +5,11 @@ test-results/
 precache.json
 lighthouse.json
 .superpowers/
+
+# Agent working documents (kept locally, never committed)
+CONTEXTi.md
+GLOSSARY.md
+research/
+docs/superpowers/
+CLAUDE.md
+AGENTS.md

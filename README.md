@@ -17,7 +17,7 @@ The iPhone (WebKit) Playwright project is off by default because it needs system
 
 ## Content
 
-Questions live in `data/<domain>.json`, scenarios in `data/scenarios.json`, retired question IDs in `data/retired-ids.json`, and `data/index.json` lists the domains and the bank version. Only questions with `reviewed: true` and not `disputed` are served. The data shapes and field rules are in `CONTEXTi.md` (section 5); terms are in `GLOSSARY.md`.
+Questions live in `data/<domain>.json`, scenarios in `data/scenarios.json`, retired question IDs in `data/retired-ids.json`, and `data/index.json` lists the domains and the bank version. Only questions with `reviewed: true` and not `disputed` are served. The data shapes and field rules are enforced by `tools/validate.js` and `src/taxonomy.js`.
 
 ## Report link
 

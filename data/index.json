@@ -1,0 +1,70 @@
+{
+  "bankVersion": "0.0.0",
+  "target": 800,
+  "domains": [
+    {
+      "id": "dlp",
+      "file": "dlp.json",
+      "authored": 0,
+      "served": 0
+    },
+    {
+      "id": "incident-response",
+      "file": "incident-response.json",
+      "authored": 0,
+      "served": 0
+    },
+    {
+      "id": "siem",
+      "file": "siem.json",
+      "authored": 0,
+      "served": 0
+    },
+    {
+      "id": "cloud-security",
+      "file": "cloud-security.json",
+      "authored": 0,
+      "served": 0
+    },
+    {
+      "id": "windows-forensics",
+      "file": "windows-forensics.json",
+      "authored": 0,
+      "served": 0
+    },
+    {
+      "id": "fundamentals",
+      "file": "fundamentals.json",
+      "authored": 0,
+      "served": 0
+    },
+    {
+      "id": "soar",
+      "file": "soar.json",
+      "authored": 0,
+      "served": 0
+    },
+    {
+      "id": "network-forensics",
+      "file": "network-forensics.json",
+      "authored": 0,
+      "served": 0
+    },
+    {
+      "id": "ai-security",
+      "file": "ai-security.json",
+      "authored": 0,
+      "served": 0
+    },
+    {
+      "id": "linux-forensics",
+      "file": "linux-forensics.json",
+      "authored": 0,
+      "served": 0
+    }
+  ],
+  "scenarios": {
+    "file": "scenarios.json",
+    "count": 0
+  }
+}

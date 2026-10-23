@@ -1,4 +1,7 @@
-import { DOMAIN_IDS, LAYERS, DIFFICULTIES, TYPES, SECTORS, SOURCE_TYPES } from '../src/taxonomy.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { DOMAINS, DOMAIN_IDS, LAYERS, DIFFICULTIES, TYPES, SECTORS, SOURCE_TYPES } from '../src/taxonomy.js';
 
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const isStr = (v) => typeof v === 'string' && v.trim() !== '';
@@ -161,4 +164,141 @@ export function validateQuestion(q) {
       break;
   }
   return errs.map((m) => `${id}: ${m}`);
+}
+
+export function distribution(questions, key) {
+  const counts = {};
+  for (const q of questions) counts[q[key]] = (counts[q[key]] || 0) + 1;
+  const out = {};
+  for (const [k, n] of Object.entries(counts)) out[k] = (n / questions.length) * 100;
+  return out;
+}
+
+const MIN_ELIGIBLE_PER_DOMAIN = 20;
+const isEligible = (q) => q.type !== 'open' && !q.scenario_id;
+const fmt = (n) => `${n.toFixed(1)}%`;
+
+function distributionFindings(questions, label) {
+  const found = [];
+  if (questions.length === 0) return found;
+  const byDomain = distribution(questions, 'domain');
+  for (const d of DOMAINS) {
+    const actual = byDomain[d.id] || 0;
+    if (Math.abs(actual - d.weight) > 3) found.push(`${label}: domain ${d.id} is ${fmt(actual)}, target ${d.weight}% (+-3)`);
+  }
+  const bySector = distribution(questions, 'sector');
+  for (const [s, target] of Object.entries(SECTORS)) {
+    const actual = bySector[s] || 0;
+    if (Math.abs(actual - target) > 5) found.push(`${label}: sector ${s} is ${fmt(actual)}, target ${target}% (+-5)`);
+  }
+  const byDifficulty = distribution(questions, 'difficulty');
+  if ((byDifficulty.intermediate || 0) < 30) found.push(`${label}: intermediate is ${fmt(byDifficulty.intermediate || 0)}, needs at least 30%`);
+  if ((byDifficulty.advanced || 0) < 20) found.push(`${label}: advanced is ${fmt(byDifficulty.advanced || 0)}, needs at least 20%`);
+  const open = distribution(questions, 'type').open || 0;
+  if (open < 3 || open > 7) found.push(`${label}: open share is ${fmt(open)}, expected 3-7%`);
+  for (const d of DOMAINS) {
+    const n = questions.filter((q) => q.domain === d.id && isEligible(q)).length;
+    if (n < MIN_ELIGIBLE_PER_DOMAIN) found.push(`${label}: eligible questions for Practice/Exam: ${d.id} has ${n}, needs ${MIN_ELIGIBLE_PER_DOMAIN}`);
+  }
+  return found;
+}
+
+function checkScenarios(errors, questions, scenarios) {
+  const byId = new Map(questions.map((q) => [q.id, q]));
+  const referenced = new Map();
+  const seen = new Set();
+  for (const s of scenarios) {
+    const tag = `scenario ${s.id}`;
+    if (!/^scn-\d{3}$/.test(s.id ?? '')) errors.push(`${tag}: id must look like scn-NNN`);
+    if (seen.has(s.id)) errors.push(`${tag}: duplicate scenario id`);
+    seen.add(s.id);
+    for (const f of ['title', 'narrative', 'debrief']) if (!isStr(s[f])) errors.push(`${tag}: ${f} is required`);
+    if (!Array.isArray(s.artifacts) || !s.artifacts.every(isStr)) errors.push(`${tag}: artifacts must be a list of strings`);
+    const ids = Array.isArray(s.questions) ? s.questions : [];
+    if (ids.length < 3 || ids.length > 6) errors.push(`${tag}: must chain 3 to 6 questions, has ${ids.length}`);
+    for (const qid of ids) {
+      const q = byId.get(qid);
+      if (!q) errors.push(`${tag}: references missing question ${qid}`);
+      else if (q.scenario_id !== s.id) errors.push(`${tag}: question ${qid} has scenario_id ${q.scenario_id}`);
+      referenced.set(qid, (referenced.get(qid) || 0) + 1);
+    }
+  }
+  for (const q of questions) {
+    if (q.scenario_id && (referenced.get(q.id) || 0) !== 1) {
+      errors.push(`scenario ${q.scenario_id}: question ${q.id} must be referenced by exactly one scenario`);
+    }
+  }
+}
+
+export function validateBank({ questions, scenarios, retiredIds, index }, opts = {}) {
+  const errors = [];
+  const warnings = [];
+  const enforce = opts.enforceDistribution ?? questions.length >= (index?.target ?? Infinity);
+
+  const seen = new Set();
+  const retired = new Set(retiredIds || []);
+  for (const q of questions) {
+    errors.push(...validateQuestion(q));
+    if (seen.has(q.id)) errors.push(`${q.id}: duplicate question id`);
+    seen.add(q.id);
+    if (retired.has(q.id)) errors.push(`${q.id}: id is retired and must not be reused`);
+  }
+
+  checkScenarios(errors, questions, scenarios || []);
+
+  if (!isStr(index?.bankVersion)) errors.push('index: bankVersion is required');
+  const listed = new Set();
+  for (const d of index?.domains ?? []) {
+    listed.add(d.id);
+    const mine = questions.filter((q) => q.domain === d.id);
+    const served = mine.filter((q) => q.reviewed === true && q.disputed !== true).length;
+    if (d.authored !== mine.length) errors.push(`index: ${d.id} authored is ${d.authored}, files hold ${mine.length}`);
+    if (d.served !== served) errors.push(`index: ${d.id} served is ${d.served}, files serve ${served}`);
+  }
+  for (const q of questions) if (!listed.has(q.domain) && DOMAIN_IDS.includes(q.domain)) errors.push(`index: ${q.id} belongs to domain ${q.domain} which index.json does not list`);
+  if (index?.scenarios?.count !== (scenarios || []).length) errors.push(`index: scenarios.count is ${index?.scenarios?.count}, found ${(scenarios || []).length}`);
+
+  const all = distributionFindings(questions, 'distribution');
+  (enforce ? errors : warnings).push(...all);
+  if (enforce) {
+    const served = questions.filter((q) => q.reviewed === true && q.disputed !== true);
+    warnings.push(...distributionFindings(served, 'distribution (served subset)'));
+  }
+  return { errors, warnings };
+}
+
+export function loadBank(dir) {
+  const errors = [];
+  const read = (file, fallback) => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8'));
+    } catch (e) {
+      errors.push(`${file}: ${e.code === 'ENOENT' ? 'file is missing' : `invalid JSON (${e.message})`}`);
+      return fallback;
+    }
+  };
+  const index = read('index.json', { bankVersion: '', target: 800, domains: [], scenarios: { file: 'scenarios.json', count: 0 } });
+  const questions = [];
+  for (const d of index.domains ?? []) {
+    const data = read(d.file, { domain: d.id, questions: [] });
+    if (data.domain !== d.id) errors.push(`${d.file}: file declares domain "${data.domain}" but index.json lists "${d.id}"`);
+    for (const q of data.questions ?? []) {
+      if (q.domain !== d.id) errors.push(`${d.file}: question ${q.id} has domain "${q.domain}", expected "${d.id}"`);
+      questions.push(q);
+    }
+  }
+  const scenarios = read(index.scenarios?.file ?? 'scenarios.json', { scenarios: [] }).scenarios ?? [];
+  const retiredIds = read('retired-ids.json', []);
+  return { input: { questions, scenarios, retiredIds, index }, errors };
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const dir = path.resolve(process.argv[2] ?? 'data');
+  const loaded = loadBank(dir);
+  const result = validateBank(loaded.input);
+  const errors = [...loaded.errors, ...result.errors];
+  for (const m of result.warnings) console.log(`warning: ${m}`);
+  for (const m of errors) console.log(`error: ${m}`);
+  console.log(`${loaded.input.questions.length} questions, ${loaded.input.scenarios.length} scenarios: ${errors.length} errors, ${result.warnings.length} warnings`);
+  process.exit(errors.length > 0 ? 1 : 0);
 }

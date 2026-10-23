@@ -1,0 +1,284 @@
+{
+  "domain": "incident-response",
+  "questions": [
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "triage"
+      ],
+      "scenario_id": "scn-001",
+      "references": [
+        {
+          "title": "NIST SP 800-61r3",
+          "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "incident-response-0001",
+      "domain": "incident-response",
+      "layer": "L1",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "single",
+      "attack": [
+        "T1048.003"
+      ],
+      "question": "A DLP alert shows an XLSX with 2,300 IBANs sent to a personal Gmail address. What is the first step?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Lock the user account at once"
+        },
+        {
+          "id": "b",
+          "text": "Validate the alert from logged metadata: recipient, classification, history and delivery status"
+        },
+        {
+          "id": "c",
+          "text": "Close it because Finance handles IBANs"
+        },
+        {
+          "id": "d",
+          "text": "Phone the employee to ask why"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "Triage starts by validating the alert from data already logged, before any containment or contact.",
+        "distractors": {
+          "a": "Containment before confirmation is disproportionate.",
+          "c": "Closing without checking ignores a personal recipient domain.",
+          "d": "Contacting the user first risks tipping off."
+        }
+      }
+    },
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "evidence"
+      ],
+      "scenario_id": "scn-001",
+      "references": [
+        {
+          "title": "NIST SP 800-61r3",
+          "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "incident-response-0002",
+      "domain": "incident-response",
+      "layer": "L2",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "multi",
+      "question": "Which data points do you gather while validating this alert?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Recipient domain"
+        },
+        {
+          "id": "b",
+          "text": "Classification label on the file"
+        },
+        {
+          "id": "c",
+          "text": "The user history of similar alerts"
+        },
+        {
+          "id": "d",
+          "text": "The employee home address"
+        }
+      ],
+      "answer": [
+        "a",
+        "b",
+        "c"
+      ],
+      "explanation": {
+        "correct": "Destination, sensitivity and history decide whether this is a real exfiltration.",
+        "distractors": {
+          "d": "A home address is irrelevant to validating the alert."
+        }
+      }
+    },
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "containment"
+      ],
+      "scenario_id": "scn-001",
+      "references": [
+        {
+          "title": "NIST SP 800-61r3",
+          "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "incident-response-0003",
+      "domain": "incident-response",
+      "layer": "L3",
+      "sector": "finance",
+      "difficulty": "advanced",
+      "type": "open",
+      "answer": [],
+      "question": "State your containment decision for this alert and justify it in three or four sentences.",
+      "rubric": [
+        "Chooses a proportionate action tied to the evidence",
+        "Preserves evidence before changing anything",
+        "Names who must approve or be informed"
+      ],
+      "explanation": {
+        "correct": "Quarantine or recall the delivered message if possible, preserve the original email and logs, keep the account active until the facts are confirmed, and inform the incident manager before any account action.",
+        "distractors": {}
+      }
+    },
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "reporting"
+      ],
+      "scenario_id": "scn-001",
+      "references": [
+        {
+          "title": "NIST SP 800-61r3",
+          "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "incident-response-0004",
+      "domain": "incident-response",
+      "layer": "Governance",
+      "sector": "finance",
+      "difficulty": "advanced",
+      "type": "open",
+      "answer": [],
+      "question": "Draft the first stakeholder update for the incident manager in three or four sentences.",
+      "rubric": [
+        "States what happened and what is confirmed",
+        "States impact and what is still unknown",
+        "Gives next steps and the time of the next update"
+      ],
+      "explanation": {
+        "correct": "At 23:40 a DLP alert flagged an email with about 2,300 customer IBANs to a personal address. Delivery is confirmed; recipient intent is unknown. We are preserving evidence and assessing notification duties. Next update in two hours.",
+        "distractors": {}
+      }
+    },
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "forensics",
+        "custody"
+      ],
+      "scenario_id": null,
+      "references": [
+        {
+          "title": "NIST SP 800-61r3",
+          "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "incident-response-0005",
+      "domain": "incident-response",
+      "layer": "L2",
+      "sector": "tech-vendor",
+      "difficulty": "basic",
+      "type": "single",
+      "question": "What is the purpose of a chain of custody record?",
+      "options": [
+        {
+          "id": "a",
+          "text": "To speed up log parsing"
+        },
+        {
+          "id": "b",
+          "text": "To document who handled evidence and when, preserving its integrity"
+        },
+        {
+          "id": "c",
+          "text": "To classify the severity of an incident"
+        },
+        {
+          "id": "d",
+          "text": "To encrypt evidence files"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "It shows evidence was handled in a controlled, traceable way.",
+        "distractors": {
+          "a": "It has no effect on parsing.",
+          "c": "Severity is set by the incident process.",
+          "d": "Encryption is separate from custody."
+        }
+      }
+    },
+    {
+      "subtopic": "fixture",
+      "tags": [
+        "volatility",
+        "memory"
+      ],
+      "scenario_id": null,
+      "references": [
+        {
+          "title": "NIST SP 800-61r3",
+          "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+        }
+      ],
+      "source_type": "original",
+      "version": 1,
+      "reviewed": true,
+      "id": "incident-response-0006",
+      "domain": "incident-response",
+      "layer": "L3",
+      "sector": "mssp-consulting",
+      "difficulty": "intermediate",
+      "type": "single",
+      "question": "On a live suspect host, which action best preserves volatile evidence?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Power the host off immediately"
+        },
+        {
+          "id": "b",
+          "text": "Capture memory before shutting the host down"
+        },
+        {
+          "id": "c",
+          "text": "Reimage the host"
+        },
+        {
+          "id": "d",
+          "text": "Delete the user profile"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "Memory is the most volatile evidence and is lost at power-off, so it is captured first.",
+        "distractors": {
+          "a": "Powering off destroys memory.",
+          "c": "Reimaging destroys all evidence.",
+          "d": "Deleting data destroys evidence."
+        }
+      }
+    }
+  ]
+}

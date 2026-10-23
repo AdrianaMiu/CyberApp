@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="CyberQuiz">
+  <rect width="512" height="512" rx="112" fill="#1d4ed8"/>
+  <path d="M256 92 380 138v104c0 82-50 146-124 178-74-32-124-96-124-178V138Z" fill="#ffffff"/>
+  <path d="m196 258 44 44 78-92" fill="none" stroke="#1d4ed8" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

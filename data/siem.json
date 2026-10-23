@@ -4490,7 +4490,7 @@
       "id": "siem-0074",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "SPL aggregation bugs",
@@ -4541,20 +4541,20 @@
       },
       "references": [
         {
-          "title": "Splunk Search Reference: bin",
-          "url": "https://docs.splunk.com/Documentation/Splunk/latest/SearchReference/Bin"
+          "title": "Splunk Search Reference: bin command",
+          "url": "https://help.splunk.com/en/splunk-enterprise/search/spl-search-reference/10.6/search-commands/bin"
         },
         {
-          "title": "Splunk Search Reference: stats",
-          "url": "https://docs.splunk.com/Documentation/Splunk/latest/SearchReference/Stats"
+          "title": "Splunk Search Reference: stats command",
+          "url": "https://help.splunk.com/en/splunk-enterprise/search/spl-search-reference/10.6/search-commands/stats"
         }
       ],
       "source_type": "tool-docs",
       "domain": "siem",
       "id": "siem-0075",
-      "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true,
+      "scenario_id": null
     },
     {
       "subtopic": "Microsoft 365 audit queries for data theft",
@@ -4622,7 +4622,7 @@
       "id": "siem-0076",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "Mailbox rule audit events",
@@ -4691,7 +4691,7 @@
       "id": "siem-0077",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "Proxy log interpretation",
@@ -4747,7 +4747,7 @@
       "id": "siem-0078",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "Windows logon failure analysis",
@@ -4810,7 +4810,7 @@
       "id": "siem-0079",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "Linux authentication log reading",
@@ -4878,7 +4878,7 @@
       "id": "siem-0080",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "Email authentication results",
@@ -4942,7 +4942,7 @@
       "id": "siem-0081",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "DNS log analysis",
@@ -5005,7 +5005,7 @@
       "id": "siem-0082",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "Email gateway event interpretation",
@@ -5069,7 +5069,7 @@
       "id": "siem-0083",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "Endpoint file events for removable media",
@@ -5129,8 +5129,8 @@
           "url": "https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-devicefileevents-table"
         },
         {
-          "title": "DeviceEvents table (Microsoft Defender XDR advanced hunting)",
-          "url": "https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-deviceevents-table"
+          "title": "Microsoft 365 Defender hunting queries: Files copied to USB drives (UsbDriveMounted + DeviceFileEvents)",
+          "url": "https://github.com/microsoft/Microsoft-365-Defender-Hunting-Queries/blob/master/Exfiltration/Files%20copied%20to%20USB%20drives.md"
         },
         {
           "title": "MITRE ATT&CK T1052.001 Exfiltration over USB",
@@ -5140,9 +5140,9 @@
       "source_type": "scenario-derived",
       "domain": "siem",
       "id": "siem-0084",
-      "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true,
+      "scenario_id": null
     },
     {
       "subtopic": "KQL string operators",
@@ -5208,7 +5208,7 @@
       "id": "siem-0085",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "SPL aggregation pitfalls",
@@ -5244,7 +5244,7 @@
         "a"
       ],
       "explanation": {
-        "correct": "When an event has no value for a by-clause field, stats does not create a group for it, so the event drops out of the grouped results. Here 22 GB of uploads came from traffic with no user, and unattributed traffic is often exactly what an analyst should look at (service accounts, authentication bypass rules, malware that avoids the proxy login). `| fillnull value=\"unknown\" user | stats sum(bytes_out) as up by user` keeps it visible as its own row. A quick habit: reconcile a grouped total against the ungrouped total before trusting a report.",
+        "correct": "When an event has no value for a by-clause field, stats does not create a group for it, so the event drops out of the grouped results (Splunk documents the same rule explicitly for tstats: rows with a null group-by field are omitted unless fillnull_value is set). Here 22 GB of uploads came from traffic with no user, and unattributed traffic is often exactly what an analyst should look at (service accounts, authentication bypass rules, malware that avoids the proxy login). `| fillnull value=\"unknown\" user | stats sum(bytes_out) as up by user` keeps it visible as its own row. A quick habit: reconcile a grouped total against the ungrouped total before trusting a report.",
         "distractors": {
           "b": "stats processes every event the search returns; it does not sample.",
           "c": "as only names the output field, and sum() handles values far larger than 63 GB.",
@@ -5254,20 +5254,24 @@
       },
       "references": [
         {
-          "title": "SOC Prime: Fillnull and values() for rule resiliency in Splunk",
-          "url": "https://socprime.com/blog/fillnull-and-values-to-increase-rule-resiliency-in-splunk/"
+          "title": "Splunk Search Reference: fillnull command",
+          "url": "https://help.splunk.com/en/splunk-enterprise/search/spl-search-reference/10.6/search-commands/fillnull"
         },
         {
-          "title": "Splunk Search Reference: fillnull",
-          "url": "https://docs.splunk.com/Documentation/Splunk/latest/SearchReference/Fillnull"
+          "title": "Splunk Search Reference: tstats command (null values in the BY clause and fillnull_value)",
+          "url": "https://help.splunk.com/en/splunk-enterprise/search/spl-search-reference/10.6/search-commands/tstats"
+        },
+        {
+          "title": "Splunk Search Reference: stats command",
+          "url": "https://help.splunk.com/en/splunk-enterprise/search/spl-search-reference/10.6/search-commands/stats"
         }
       ],
       "source_type": "tool-docs",
       "domain": "siem",
       "id": "siem-0086",
-      "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true,
+      "scenario_id": null
     },
     {
       "subtopic": "Entra ID sign-in log coverage",
@@ -5334,7 +5338,7 @@
       "id": "siem-0087",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "Windows object access auditing",
@@ -5393,7 +5397,7 @@
       "id": "siem-0088",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "Account lockout events",
@@ -5446,7 +5450,7 @@
       "id": "siem-0089",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "DNS attribution through resolvers",
@@ -5501,7 +5505,7 @@
       "id": "siem-0090",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "KQL join behaviour",
@@ -5556,7 +5560,7 @@
       "id": "siem-0091",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "Windows log-clearing events",
@@ -5626,7 +5630,7 @@
       "id": "siem-0092",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "Web upload event triage",
@@ -5688,7 +5692,7 @@
       "id": "siem-0093",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "SPL pipeline construction",
@@ -5738,24 +5742,24 @@
       },
       "references": [
         {
-          "title": "Splunk Search Reference: bin",
-          "url": "https://docs.splunk.com/Documentation/Splunk/latest/SearchReference/Bin"
+          "title": "Splunk Search Reference: bin command",
+          "url": "https://help.splunk.com/en/splunk-enterprise/search/spl-search-reference/10.6/search-commands/bin"
         },
         {
-          "title": "Splunk Search Reference: stats",
-          "url": "https://docs.splunk.com/Documentation/Splunk/latest/SearchReference/Stats"
+          "title": "Splunk Search Reference: stats command",
+          "url": "https://help.splunk.com/en/splunk-enterprise/search/spl-search-reference/10.6/search-commands/stats"
         },
         {
-          "title": "Splunk CIM: Web data model",
-          "url": "https://docs.splunk.com/Documentation/CIM/latest/User/Web"
+          "title": "Splunk Common Information Model: Web data model (bytes_out, http_method, user)",
+          "url": "https://help.splunk.com/en/data-management/common-information-model/6.1/data-models/web"
         }
       ],
       "source_type": "tool-docs",
       "domain": "siem",
       "id": "siem-0094",
-      "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true,
+      "scenario_id": null
     },
     {
       "subtopic": "Proxy and web server log fields",
@@ -5848,7 +5852,7 @@
       "id": "siem-0095",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "SPL to KQL translation",
@@ -5937,7 +5941,7 @@
       "id": "siem-0096",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     },
     {
       "subtopic": "Linux privilege use in auth logs",
@@ -6035,7 +6039,7 @@
       "id": "siem-0097",
       "scenario_id": null,
       "version": 1,
-      "reviewed": false
+      "reviewed": true
     }
   ]
 }

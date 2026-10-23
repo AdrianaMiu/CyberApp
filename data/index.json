@@ -1,5 +1,5 @@
 {
-  "bankVersion": "2026.10.23.128",
+  "bankVersion": "2026.10.23.152",
   "target": 800,
   "domains": [
     {
@@ -18,7 +18,7 @@
       "id": "siem",
       "file": "siem.json",
       "authored": 97,
-      "served": 73
+      "served": 97
     },
     {
       "id": "cloud-security",

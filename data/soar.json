@@ -1,4 +1,1392 @@
 {
   "domain": "soar",
-  "questions": []
+  "questions": [
+    {
+      "subtopic": "playbook vs runbook",
+      "layer": "L1",
+      "sector": "general",
+      "difficulty": "basic",
+      "type": "single",
+      "tags": [
+        "runbook",
+        "playbook-design",
+        "business-continuity"
+      ],
+      "question": "Your SOC's phishing triage now runs entirely as an automated SOAR playbook. A colleague proposes deleting the written step-by-step procedure (the runbook) that the playbook was built from, because \"the playbook is the documentation\". What is the strongest reason to keep the runbook?",
+      "options": [
+        {
+          "id": "a",
+          "text": "The SOAR platform cannot execute a playbook unless a matching runbook document is attached to it"
+        },
+        {
+          "id": "b",
+          "text": "The runbook holds the detection logic, so the alert that starts the playbook would stop firing without it"
+        },
+        {
+          "id": "c",
+          "text": "Analysts need a procedure they can follow by hand when the platform or an integration is down, and reviewers need the intended process to check the automated logic against"
+        },
+        {
+          "id": "d",
+          "text": "Keeping both lets analysts work the runbook in parallel with the playbook on every alert, which doubles coverage"
+        }
+      ],
+      "answer": [
+        "c"
+      ],
+      "explanation": {
+        "correct": "A playbook is the executable workflow in the SOAR platform; a runbook is the written procedure a person can follow. Automation fails in ordinary ways: an API key expires, a connector breaks, the SOAR platform itself has an outage. Reported phishing still has to be triaged within the SLA, and analysts do that from the runbook. The runbook also records intent (what should happen, in what order and why), which is what you test the playbook against and what a reviewer compares it with after a wrong automated action. Keep the two in sync: a change to one triggers a review of the other.",
+        "distractors": {
+          "a": "SOAR platforms run playbooks from their own definitions; no attached document is required.",
+          "b": "Detection logic lives in the SIEM, email-security or DLP rule that raises the alert, not in the runbook. Deleting the document changes nothing about alerts firing.",
+          "d": "Doing the manual steps in parallel on every alert duplicates work and can produce conflicting actions (two deletions, two replies to the reporter). The runbook is a fallback and a reference, not a second executor."
+        },
+        "interview_angle": "Whether you treat automation as something that can fail and plan the manual fallback."
+      },
+      "references": [
+        {
+          "title": "NIST SP 800-61 Rev. 3, Incident Response Recommendations and Considerations",
+          "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+        }
+      ],
+      "source_type": "original",
+      "domain": "soar",
+      "id": "soar-0001",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "human-in-the-loop approval context",
+      "layer": "L1",
+      "sector": "general",
+      "difficulty": "basic",
+      "type": "single",
+      "tags": [
+        "human-in-the-loop",
+        "enrichment",
+        "approval-gate"
+      ],
+      "question": "During your shift the SOAR platform posts this approval request in the team chat: \"Approve block of 198.51.100.23 at the perimeter firewall? [Approve] [Reject]\". Nothing else is shown. What is the main design flaw of this approval step?",
+      "options": [
+        {
+          "id": "a",
+          "text": "It should be sent by email instead of chat, so that there is a record of the decision"
+        },
+        {
+          "id": "b",
+          "text": "It asks for a decision without the context needed to make it: the triggering alert, the IP's reputation, which internal systems or partners talk to it, and what the block would affect"
+        },
+        {
+          "id": "c",
+          "text": "Blocking an IP address is low risk, so this action should never need an approval"
+        },
+        {
+          "id": "d",
+          "text": "It should not offer a Reject button, because the playbook has already decided the IP is malicious"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "An approval gate works only if the approver can decide quickly from what is on screen. Here the analyst must either approve blind (rubber-stamping) or start a second investigation, which defeats the purpose of automating. The playbook should enrich first and then prompt: the alert that triggered it, reputation and first-seen data for the IP, whether internal servers, partners or cloud services use it, and the proposed scope and duration of the block. Tines' own guidance for human-in-the-loop workflows makes the same point: enrich before the prompt so the checkpoint is a quick decision, not a second investigation.",
+        "distractors": {
+          "a": "The channel is not the problem: chat approvals can be logged by the SOAR platform as well. An email with the same single line would be just as uninformed.",
+          "c": "A perimeter block can cut off a payment processor, a partner VPN or a shared cloud address. Whether it needs approval depends on that impact, which is exactly the context this prompt leaves out.",
+          "d": "Without a Reject option the step is not a decision at all. Approval exists because automated verdicts can be wrong."
+        },
+        "interview_angle": "Whether you know that a human checkpoint is only as good as the context presented with it."
+      },
+      "references": [
+        {
+          "title": "Tines community: How do I build a human-in-the-loop approval workflow?",
+          "url": "https://community.tines.com/t/how-do-i-build-a-human-in-the-loop-approval-workflow/30"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "soar",
+      "id": "soar-0002",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "what to automate first",
+      "layer": "Governance",
+      "sector": "finance",
+      "difficulty": "basic",
+      "type": "single",
+      "tags": [
+        "automation-strategy",
+        "dlp",
+        "phishing"
+      ],
+      "question": "A bank's SOC has bought a SOAR platform and must choose the first process to automate. Each week it handles about 400 DLP alerts and 150 user-reported phishing emails, and it sees about two ransomware escalations a year. Using the usual criteria (high volume, repeatable steps, low harm if the automation is wrong), which is the best first candidate?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Automatically disabling the account of any user who triggers a High-severity DLP alert"
+        },
+        {
+          "id": "b",
+          "text": "The ransomware response, because it is the highest-impact scenario"
+        },
+        {
+          "id": "c",
+          "text": "Deciding whether an incident is major under DORA and must be reported to the authority"
+        },
+        {
+          "id": "d",
+          "text": "Collecting enrichment for every DLP alert and reported phishing email (user role, sender and URL reputation, earlier incidents) and attaching it to the case for the analyst"
+        }
+      ],
+      "answer": [
+        "d"
+      ],
+      "explanation": {
+        "correct": "Good first candidates run often, follow the same steps each time, and cause little harm when the automation is wrong. Read-only enrichment of DLP and phishing alerts meets all three: hundreds of runs a week, identical lookups each time, and the worst case is an analyst seeing imperfect context. It saves analyst time at once and builds trust in the platform before any containment action is automated.",
+        "distractors": {
+          "a": "Disabling accounts automatically on a single alert is high risk: one false positive locks out a payments or front-office employee. Containment like this belongs behind an approval gate and later in the roadmap.",
+          "b": "Ransomware is rare and every case differs. Two runs a year give little return and almost no chance to prove the playbook works; keep it as a well-rehearsed runbook first.",
+          "c": "Classifying an incident as major under DORA needs judgement on critical services, thresholds and impact, owned by named people. Automation can gather the figures, but the decision stays human."
+        },
+        "interview_angle": "Whether you pick automation targets by volume and risk rather than by how dramatic the scenario is."
+      },
+      "references": [
+        {
+          "title": "NIST SP 800-61 Rev. 3, Incident Response Recommendations and Considerations",
+          "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+        }
+      ],
+      "source_type": "original",
+      "domain": "soar",
+      "id": "soar-0003",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "ticketing integration",
+      "layer": "L2",
+      "sector": "mssp-consulting",
+      "difficulty": "intermediate",
+      "type": "single",
+      "tags": [
+        "ticketing",
+        "itsm-integration",
+        "metrics"
+      ],
+      "question": "An MSSP's SOAR playbook opens a ticket in each client's ITSM tool for every confirmed incident. Clients close the tickets in their own ITSM, but the matching SOAR incidents stay open, so the MSSP's monthly report shows dozens of SLA breaches that never happened. What is missing from the integration?",
+      "options": [
+        {
+          "id": "a",
+          "text": "An inbound sync that reads the ticket status and closure reason back from the client's ITSM (by webhook or polling, matched on the stored ticket ID) and updates the SOAR incident"
+        },
+        {
+          "id": "b",
+          "text": "A second outbound step that opens a new ticket whenever the first one is closed, to confirm the closure"
+        },
+        {
+          "id": "c",
+          "text": "A higher SLA threshold in the report, so that incidents left open stop counting as breaches"
+        },
+        {
+          "id": "d",
+          "text": "A rule that closes every SOAR incident automatically 24 hours after its ticket is created"
+        }
+      ],
+      "answer": [
+        "a"
+      ],
+      "explanation": {
+        "correct": "The integration is one-way: SOAR creates the ticket, but nothing brings the client's closure back. A two-way integration stores the ITSM ticket ID on the SOAR incident (and a link to the SOAR incident in the ticket), then receives or polls status changes and closure notes so both records agree. Time-to-closure metrics are then computed from real closure times; Microsoft Sentinel's incident metrics, for example, derive time to closure from the incident's ClosedTime, which stays empty if the incident is never closed. The closure reason (true positive, false positive, benign) also becomes available for tuning.",
+        "distractors": {
+          "b": "More tickets add noise and duplicates; they do not tell the SOAR platform that the case is closed.",
+          "c": "Raising the threshold hides the symptom and also hides real breaches. The underlying data stays wrong.",
+          "d": "Timed auto-closure closes incidents that are still being worked and records a closure nobody made, which makes the metrics wrong in the other direction."
+        }
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Manage your SOC better with incident metrics",
+          "url": "https://learn.microsoft.com/en-us/azure/sentinel/manage-soc-with-incident-metrics"
+        }
+      ],
+      "source_type": "original",
+      "domain": "soar",
+      "id": "soar-0004",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "approval gates in phishing triage",
+      "layer": "L1",
+      "sector": "general",
+      "difficulty": "basic",
+      "type": "single",
+      "tags": [
+        "human-in-the-loop",
+        "phishing",
+        "approval-gate"
+      ],
+      "question": "In a reported-phishing playbook, which step is normally placed behind an analyst approval instead of running automatically?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Extracting URLs and attachment hashes from the reported message"
+        },
+        {
+          "id": "b",
+          "text": "Checking the SPF, DKIM and DMARC results in the message headers"
+        },
+        {
+          "id": "c",
+          "text": "Searching all mailboxes for copies of the message and deleting them"
+        },
+        {
+          "id": "d",
+          "text": "Counting how many other users received a message with the same sender and subject"
+        }
+      ],
+      "answer": [
+        "c"
+      ],
+      "explanation": {
+        "correct": "Deleting messages across mailboxes changes many users' data at once and is hard to undo if the verdict or the search query is wrong. Vendor content reflects this: in Cortex XSOAR's 'Phishing - Generic v3', final remediation tasks are manual by default, and the Search and Delete capability is off unless enabled; when enabled, it deletes the other copies pending analyst approval. Automatic blocking of indicators is also off by default. The read-only steps (extracting indicators, checking headers, counting recipients) run automatically and feed the analyst's decision.",
+        "distractors": {
+          "a": "Extraction only reads the message; it is the input to enrichment and changes nothing.",
+          "b": "Header authentication checks are read-only and a standard part of automated triage.",
+          "d": "Counting recipients is a read-only search. Its result tells the approver how large the deletion would be, so it should run before the approval, not behind it."
+        }
+      },
+      "references": [
+        {
+          "title": "Cortex XSOAR reference: Phishing - Generic v3 playbook",
+          "url": "https://xsoar.pan.dev/docs/reference/playbooks/phishing---generic-v3"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "soar",
+      "id": "soar-0005",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "DLP triage playbook auto-closure",
+      "layer": "Engineering",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "single",
+      "tags": [
+        "dlp",
+        "auto-closure",
+        "allow-list"
+      ],
+      "question": "A bank's DLP triage playbook should close some alerts automatically so analysts can focus on real cases. A typical alert: an XLSX file with 1,900 IBANs emailed by a Payments Operations user to an external address. Which condition is defensible as an automatic-closure rule?",
+      "options": [
+        {
+          "id": "a",
+          "text": "The sender is a department head, so the transfer is assumed to be authorised"
+        },
+        {
+          "id": "b",
+          "text": "The recipient domain is on a maintained list of partners approved to receive this data type, each entry backed by a contract and an owner, and the playbook writes the matched entry into the closure reason"
+        },
+        {
+          "id": "c",
+          "text": "The user has had no DLP incidents in the previous 12 months"
+        },
+        {
+          "id": "d",
+          "text": "The email has already been delivered, so it can no longer be blocked and the alert has no further use"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "Automatic closure is safe only when the condition is objective, maintained by someone accountable, and recorded. A list of partner domains approved for this data type, with a contract and an owner who reviews it, meets that bar, and writing the matched entry into the closure reason makes each closure auditable. Everything else becomes an analyst task with the enrichment attached. The list itself needs periodic review: a stale partner entry becomes a permanent hole in the policy.",
+        "distractors": {
+          "a": "Seniority is not authorisation. Senior staff are frequent social-engineering targets and can leak data too; role is useful enrichment, not a closure criterion.",
+          "c": "A clean history lowers the prior but says nothing about this transfer, and many leaks are a user's first incident. Use history to prioritise, not to close.",
+          "d": "A delivered email is the case that most needs review: the data has left, and the response moves to recall or deletion requests, contacting the recipient and assessing GDPR notification."
+        },
+        "interview_angle": "Whether you can state the conditions under which closing without a human is acceptable."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Learn about investigating data loss prevention alerts",
+          "url": "https://learn.microsoft.com/en-us/purview/dlp-alert-investigation-learn"
+        }
+      ],
+      "source_type": "scenario-derived",
+      "domain": "soar",
+      "id": "soar-0006",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "DLP exception request workflow",
+      "layer": "L2",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "single",
+      "tags": [
+        "dlp",
+        "exceptions",
+        "approval-gate"
+      ],
+      "question": "Your bank uses a SOAR playbook to handle DLP exception requests: the user explains why they need to send a certain data type to an external party, and the playbook routes the request. Which design should the approval step follow?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Grant the exception automatically when the user's justification field is not empty, and log it"
+        },
+        {
+          "id": "b",
+          "text": "Let the SOC analyst on shift approve it alone, and make the exception permanent to avoid repeat requests"
+        },
+        {
+          "id": "c",
+          "text": "Send the user an Approve button so they can confirm the exception themselves after reading the policy"
+        },
+        {
+          "id": "d",
+          "text": "Route the request, with the user's justification and enrichment (role, manager, data type, recipient), to the data or business owner, record who decided and why, and give each approved exception an owner and an expiry date"
+        }
+      ],
+      "answer": [
+        "d"
+      ],
+      "explanation": {
+        "correct": "An exception is a deliberate hole in a DLP policy, so it needs an accountable approver who understands the business need (the data or business owner, often with the user's manager), a record of the decision, and a limited lifetime. Palo Alto Networks' 'DLP Incident Feedback Loop' playbook for Cortex XSOAR shows the parts worth automating: enrich the user from Active Directory, collect the user's feedback, request approval, and tell the user the outcome through Teams, Slack or email. Owner and expiry are design choices you add so that exceptions do not accumulate silently; auditors in banks ask for exactly that list.",
+        "distractors": {
+          "a": "Any text passes a 'not empty' check, so this turns the policy into a self-service bypass.",
+          "b": "The analyst can validate the request but usually cannot judge the business need, and a permanent exception outlives the project or contract that justified it.",
+          "c": "Self-approval removes the separation between the person asking and the person deciding."
+        }
+      },
+      "references": [
+        {
+          "title": "Palo Alto Networks: Playbook of the Week, Automating DLP Incident Feedback",
+          "url": "https://www.paloaltonetworks.com/blog/security-operations/playbook-of-the-week-automating-dlp-incident-feedback"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "soar",
+      "id": "soar-0007",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "error handling in containment playbooks",
+      "layer": "Engineering",
+      "sector": "mssp-consulting",
+      "difficulty": "advanced",
+      "type": "single",
+      "tags": [
+        "error-handling",
+        "containment",
+        "idempotency"
+      ],
+      "question": "An MSSP runs a containment playbook for a client after a confirmed account compromise. The run shows: disable account, succeeded; revoke active sessions, failed (HTTP 503 after 4 retries); isolate laptop through EDR, succeeded; set incident status to Contained, not yet run. What should the playbook do next?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Leave the incident as not contained, record which step failed and why, and open a high-priority task for an analyst to retry the session revocation or do it by hand, keeping the two successful actions in place"
+        },
+        {
+          "id": "b",
+          "text": "Roll back the account disable and the isolation so the environment is consistent, then re-run the whole playbook later"
+        },
+        {
+          "id": "c",
+          "text": "Set the incident to Contained, since two of the three actions succeeded and the account is already disabled"
+        },
+        {
+          "id": "d",
+          "text": "Re-run the whole playbook from the start immediately, including the client notification and ticket creation"
+        }
+      ],
+      "answer": [
+        "a"
+      ],
+      "explanation": {
+        "correct": "A partial failure must be visible and specific. Sessions and tokens already issued can keep working for a while after an account is disabled, which is why session revocation is a separate step; until it succeeds, containment is incomplete, and marking the incident Contained would mislead the client and the metrics. The two successful actions protect the client and stay in place. The failed step is safe to retry (revoking twice changes nothing) or can be done by hand, through a task that names the step and the error. In Logic Apps, which Microsoft Sentinel playbooks run on, this is built with a retry policy (it resends on 408, 429 or 5xx responses) and the 'run after' setting, which lets the next action run when a step ends as Failed or TimedOut so the workflow takes a failure branch instead of stopping silently.",
+        "distractors": {
+          "b": "Undoing successful containment gives the attacker access back for the sake of 'consistency'. Containment actions stay unless they were themselves wrong.",
+          "c": "Status must reflect reality. With sessions still valid, the attacker may still have access, so the incident is not contained.",
+          "d": "A full re-run repeats steps that are not safe to repeat, such as a second client notification and a duplicate ticket. Retry only the failed step."
+        },
+        "interview_angle": "Whether you design for partial failure instead of assuming every action either fully succeeds or fully fails."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Handle errors and exceptions in Azure Logic Apps",
+          "url": "https://learn.microsoft.com/en-us/azure/logic-apps/logic-apps-exception-handling"
+        }
+      ],
+      "source_type": "original",
+      "domain": "soar",
+      "id": "soar-0008",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "idempotency of playbook steps",
+      "layer": "Engineering",
+      "sector": "mssp-consulting",
+      "difficulty": "intermediate",
+      "type": "single",
+      "tags": [
+        "idempotency",
+        "ticketing",
+        "duplicates"
+      ],
+      "question": "At an MSSP, a playbook trigger sometimes fires twice for the same incident (for example after a connector reconnects). Each run creates a ticket in the client's ITSM and emails the client, and clients complain about duplicates. Which change makes the 'create ticket' step idempotent?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Add a 60-second delay at the start of the playbook"
+        },
+        {
+          "id": "b",
+          "text": "Ask clients to merge duplicate tickets in their ITSM"
+        },
+        {
+          "id": "c",
+          "text": "Before creating a ticket, search for one that carries the SOAR incident ID as its external reference; update it if found, create it only if not"
+        },
+        {
+          "id": "d",
+          "text": "Turn off automatic triggering and have analysts start every run by hand"
+        }
+      ],
+      "answer": [
+        "c"
+      ],
+      "explanation": {
+        "correct": "An idempotent step leaves the same end state no matter how many times it runs. The standard pattern is check-then-create with a stable key: write the SOAR incident ID into the ticket's external-reference field when you create it, and search for that key first on every run. A second run then updates the existing ticket (or does nothing) and skips the duplicate email. Apply the same idea to other steps that are not safe to repeat, such as notifications, comments and blocks. Vendors warn about the same risk: the Cortex XSOAR reference for 'Phishing - Generic v3' says not to rerun that playbook inside an existing phishing incident because the result can be unexpected.",
+        "distractors": {
+          "a": "A delay changes timing, but both runs still create a ticket; at best it hides the race some of the time.",
+          "b": "This pushes the MSSP's defect onto the client, and the duplicate emails still go out.",
+          "d": "Manual starts remove the duplicates by removing the automation, and a person re-running a playbook can still create duplicates."
+        }
+      },
+      "references": [
+        {
+          "title": "Cortex XSOAR reference: Phishing - Generic v3 playbook",
+          "url": "https://xsoar.pan.dev/docs/reference/playbooks/phishing---generic-v3"
+        }
+      ],
+      "source_type": "original",
+      "domain": "soar",
+      "id": "soar-0009",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "testing playbooks in a staging tenant",
+      "layer": "Engineering",
+      "sector": "general",
+      "difficulty": "intermediate",
+      "type": "multi",
+      "tags": [
+        "testing",
+        "staging",
+        "change-management"
+      ],
+      "question": "You are about to enable a new playbook that disables accounts and quarantines emails. Which THREE practices should come before it runs with full containment in production?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Run it in a staging tenant with test users, mailboxes and devices, using credentials separate from production"
+        },
+        {
+          "id": "b",
+          "text": "Test it on a senior executive's real mailbox in production, because that is where phishing hurts most"
+        },
+        {
+          "id": "c",
+          "text": "Replay a set of recorded, sanitised past alerts (true and false positives) and check that each one takes the expected branch"
+        },
+        {
+          "id": "d",
+          "text": "Give the staging playbook's service account administrator rights in production as well, so tests run on real data"
+        },
+        {
+          "id": "e",
+          "text": "Enable it in production first in a dry-run mode that logs the containment actions it would take, and compare them with what analysts actually did"
+        }
+      ],
+      "answer": [
+        "a",
+        "c",
+        "e"
+      ],
+      "explanation": {
+        "correct": "A staging tenant lets you exercise every action (disable, quarantine, release) against accounts and mailboxes that nobody depends on, with separate credentials so a bug cannot reach production. Replaying past alerts tests the decision logic with realistic input, including the false positives the playbook must not act on. A dry-run period in production then shows how the playbook behaves on live traffic without changing anything: if its intended actions differ from the analysts' decisions, you fix the logic before giving it the power to act.",
+        "distractors": {
+          "b": "Testing on a real executive mailbox risks deleting or quarantining business email of the person you most need to protect, and gives no controlled expected result.",
+          "d": "Production admin rights for a test identity remove the isolation that makes staging safe; a test run could act on real users."
+        },
+        "interview_angle": "Whether you test automation like code, with isolation, test data and a no-action phase."
+      },
+      "references": [
+        {
+          "title": "NIST SP 800-61 Rev. 3, Incident Response Recommendations and Considerations",
+          "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+        }
+      ],
+      "source_type": "original",
+      "domain": "soar",
+      "id": "soar-0010",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "ordering phishing triage playbook steps",
+      "layer": "L2",
+      "sector": "general",
+      "difficulty": "intermediate",
+      "type": "ordering",
+      "tags": [
+        "phishing",
+        "playbook-design",
+        "triage"
+      ],
+      "question": "Put the steps of a reported-phishing triage playbook in the order they should run.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Enrich the indicators: sender authentication, URL and domain reputation, attachment detonation"
+        },
+        {
+          "id": "b",
+          "text": "Tell the reporting user the outcome and close the incident with a classification"
+        },
+        {
+          "id": "c",
+          "text": "Parse the reported email: headers, URLs, attachments"
+        },
+        {
+          "id": "d",
+          "text": "Delete the approved copies and block the indicators the analyst selected"
+        },
+        {
+          "id": "e",
+          "text": "Calculate severity and reach a verdict"
+        },
+        {
+          "id": "f",
+          "text": "Search other mailboxes for copies and present the scope to an analyst for approval"
+        }
+      ],
+      "answer": [
+        "c",
+        "a",
+        "e",
+        "f",
+        "d",
+        "b"
+      ],
+      "explanation": {
+        "correct": "Parsing comes first because every later step needs the extracted indicators. Enrichment then adds context to those indicators, and the severity and verdict are calculated from that context. Only a malicious verdict justifies looking for the wider campaign, and the scope found (how many copies, which mailboxes) is what the analyst approves. The approved removal and blocking follow, and the run ends by telling the reporter and closing with a classification, which also feeds tuning metrics. Cortex XSOAR's 'Phishing - Generic v3' follows the same shape: enrichment and header authentication checks, a calculated severity, then remediation that is manual by default, while the playbook keeps the reporting user informed.",
+        "distractors": {}
+      },
+      "references": [
+        {
+          "title": "Cortex XSOAR reference: Phishing - Generic v3 playbook",
+          "url": "https://xsoar.pan.dev/docs/reference/playbooks/phishing---generic-v3"
+        },
+        {
+          "title": "Palo Alto Networks: Playbook of the Week, new features for better response to phishing campaigns",
+          "url": "https://www.paloaltonetworks.com/blog/security-operations/playbook-of-the-week-new-features-for-better-response-to-phishing-campaigns"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "soar",
+      "id": "soar-0011",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "ordering DLP triage playbook steps",
+      "layer": "Engineering",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "ordering",
+      "tags": [
+        "dlp",
+        "playbook-design",
+        "gdpr"
+      ],
+      "question": "A bank is designing a DLP triage playbook for alerts about customer data sent outside the bank. Put its stages in order.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Branch: close automatically only if the recipient matches the approved-partner list; otherwise create an analyst task with all the context"
+        },
+        {
+          "id": "b",
+          "text": "If personal data has left the bank, open the incident ticket and start the GDPR breach-notification assessment, recording when the bank became aware"
+        },
+        {
+          "id": "c",
+          "text": "Trigger on the DLP alert and check whether an open case already exists for the same user and file, attaching to it instead of duplicating"
+        },
+        {
+          "id": "d",
+          "text": "After the analyst confirms, run the approved containment (for example remove the external share and inform the user's manager)"
+        },
+        {
+          "id": "e",
+          "text": "Enrich: user role and manager, insider-risk level, earlier incidents, whether the message was blocked or delivered, recipient domain"
+        }
+      ],
+      "answer": [
+        "c",
+        "e",
+        "a",
+        "d",
+        "b"
+      ],
+      "explanation": {
+        "correct": "Deduplication comes first so one leak does not become five cases. Enrichment follows, because both the automatic-closure branch and the analyst need it. The branch closes only the unambiguous cases and sends everything else to a person with the context on one screen. Containment runs after a human confirms, because blocking or removing access affects a working employee. If personal data has left, the case moves into incident handling: the ticket is opened and the GDPR assessment starts, with timestamps, because the 72-hour clock under art. 33 runs from when the bank becomes aware of the breach. Microsoft's DLP alert guidance describes a similar lifecycle for Purview DLP alerts: trigger, notify, triage, investigate, remediate, tune.",
+        "distractors": {}
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Learn about investigating data loss prevention alerts",
+          "url": "https://learn.microsoft.com/en-us/purview/dlp-alert-investigation-learn"
+        }
+      ],
+      "source_type": "scenario-derived",
+      "domain": "soar",
+      "id": "soar-0012",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "rolling out playbooks across client tenants",
+      "layer": "Engineering",
+      "sector": "mssp-consulting",
+      "difficulty": "intermediate",
+      "type": "ordering",
+      "tags": [
+        "testing",
+        "staging",
+        "mssp"
+      ],
+      "question": "An MSSP has written a new account-containment playbook that it plans to use for all its clients. Put the rollout steps in order.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Enable it for one pilot client, with the containment actions behind an approval gate"
+        },
+        {
+          "id": "b",
+          "text": "Replay sanitised historical alerts in dry-run mode and check every branch"
+        },
+        {
+          "id": "c",
+          "text": "Monitor the pilot's runs, failures and action counts, then extend to the other clients"
+        },
+        {
+          "id": "d",
+          "text": "Build and unit-test it in the MSSP's own staging tenant with test accounts"
+        },
+        {
+          "id": "e",
+          "text": "Get a peer review and agree the change with the client, including which actions need approval"
+        }
+      ],
+      "answer": [
+        "d",
+        "b",
+        "e",
+        "a",
+        "c"
+      ],
+      "explanation": {
+        "correct": "Build and unit-test where a bug can only hit test accounts, then replay realistic alerts without acting to prove the decision logic. Review and client agreement come next, because the client owns the accounts the playbook will touch and must accept which actions run automatically and which wait for approval. A single pilot client limits the blast radius of anything the tests missed, and keeping containment behind approval there gives a human check on every action. Only after the pilot's run history (failures, number of actions, analyst overrides) looks right does the playbook go to every client.",
+        "distractors": {},
+        "interview_angle": "Whether you think about blast radius when one playbook serves many customers."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Automate threat response in Microsoft Sentinel with automation rules",
+          "url": "https://learn.microsoft.com/en-us/azure/sentinel/automate-incident-handling-with-automation-rules"
+        }
+      ],
+      "source_type": "original",
+      "domain": "soar",
+      "id": "soar-0013",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "reading an automation-rule definition",
+      "layer": "Engineering",
+      "sector": "general",
+      "difficulty": "advanced",
+      "type": "log-analysis",
+      "tags": [
+        "automation-rule",
+        "loop",
+        "idempotency"
+      ],
+      "question": "Some incidents collect hundreds of identical enrichment comments, and the threat-intelligence API quota runs out by noon. Based on this rule definition, what is the cause, and what fixes it?",
+      "context": "{\n  \"name\": \"enrich-medium-high\",\n  \"trigger\": \"incident_updated\",\n  \"conditions\": [\n    { \"field\": \"severity\", \"op\": \"in\", \"value\": [\"Medium\", \"High\"] }\n  ],\n  \"actions\": [\n    { \"type\": \"run_playbook\", \"playbook\": \"enrich-and-comment\" },\n    { \"type\": \"add_tag\", \"value\": \"auto-enriched\" }\n  ]\n}\n# engine: incident_updated fires on any change to an incident, including changes made by rules and playbooks\n# enrich-and-comment: queries 3 threat-intel APIs and posts the results as an incident comment",
+      "options": [
+        {
+          "id": "a",
+          "text": "The severity condition is too broad; restricting it to High stops the duplicate comments"
+        },
+        {
+          "id": "b",
+          "text": "The playbook runs before the tag is added; swapping the two actions stops the duplicates"
+        },
+        {
+          "id": "c",
+          "text": "The threat-intel APIs return duplicate results; deduplicating the comment text in the playbook fixes it"
+        },
+        {
+          "id": "d",
+          "text": "The rule's own actions (the comment and the tag) update the incident, which fires incident_updated again, so the rule loops; exclude updates made by automation and skip incidents already tagged auto-enriched"
+        }
+      ],
+      "answer": [
+        "d"
+      ],
+      "explanation": {
+        "correct": "Each run posts a comment and adds a tag; both are updates, so the engine fires the rule again, the severity condition is still true, and the cycle repeats until something external changes the incident. Two guards fix it: a condition that ignores updates whose source is an automation rule or a playbook, and an idempotency check (do nothing if the auto-enriched tag is already present). Enrichment also fits better on the incident-created trigger, so it runs once per incident. Microsoft Sentinel provides the first guard directly: the update trigger has an 'Updated by' condition (values include an automation rule and a playbook), and Microsoft's example is a rule that runs on any change except one made by another automation rule.",
+        "distractors": {
+          "a": "Fewer incidents would loop, but every High incident would still loop forever; the trigger design is the defect, not the severity filter.",
+          "b": "Both actions update the incident, so their order does not matter; either one re-fires the rule.",
+          "c": "The comments are identical because the same enrichment runs again and again, not because the APIs duplicate results. Deduplicating text would hide the symptom while the API calls, and the quota drain, continue."
+        },
+        "interview_angle": "Whether you can spot a self-triggering automation from its definition before it reaches production."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Automate threat response in Microsoft Sentinel with automation rules",
+          "url": "https://learn.microsoft.com/en-us/azure/sentinel/automate-incident-handling-with-automation-rules"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "soar",
+      "id": "soar-0014",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "error handling in DLP triage playbooks",
+      "layer": "L2",
+      "sector": "finance",
+      "difficulty": "advanced",
+      "type": "log-analysis",
+      "tags": [
+        "error-handling",
+        "fail-open",
+        "dlp"
+      ],
+      "question": "A DLP alert about an outgoing file with 1,900 IBANs was closed before any analyst saw it. What does this playbook run log show?",
+      "context": "run 8812  trigger=dlp_alert  alert=DLP-4471  user=ana.radu@example.com\n10:02:11  enrich_user   OK       dept=Payments Ops  manager=m.ionescu\n10:02:41  enrich_irm    TIMEOUT  after 30s  retries=0\n10:02:41  risk_score    OK       score=12/100  inputs={irm_level: null, prior_incidents: 0, sit_count: 1900}\n10:02:42  decide        branch=auto_close  rule=\"score < 20\"\n10:02:42  close_alert   OK       status=Resolved  classification=FalsePositive  closed_by=automation",
+      "options": [
+        {
+          "id": "a",
+          "text": "The insider-risk lookup timed out, the scoring step treated the missing value as no risk, and the low score sent the alert to automatic closure: the playbook fails open when an enrichment fails"
+        },
+        {
+          "id": "b",
+          "text": "The user enrichment returned the wrong department, which lowered the risk score"
+        },
+        {
+          "id": "c",
+          "text": "The alert was closed correctly: a score of 12 is below the threshold and the user has no earlier incidents"
+        },
+        {
+          "id": "d",
+          "text": "The only defect is the 30-second timeout; raising it to 120 seconds fixes the problem"
+        }
+      ],
+      "answer": [
+        "a"
+      ],
+      "explanation": {
+        "correct": "The inputs line is the evidence: irm_level is null because enrich_irm timed out at 10:02:41 with no retries, yet risk_score still ran and produced 12/100 despite sit_count=1900, and decide closed the alert on 'score < 20'. Two design flaws combine: a required enrichment has no retry or failure branch, and the scoring step treats missing data as benign. The fix is to retry with backoff, and if the value is still missing, route the alert to an analyst marked 'enrichment incomplete'; never auto-close on partial inputs. Recording the closure as FalsePositive also corrupts the tuning metrics, because nobody judged it false.",
+        "distractors": {
+          "b": "The department is Payments Ops, which fits someone who handles IBANs; nothing in the log suggests it is wrong.",
+          "c": "The threshold was met only because an input was missing. A decision made on incomplete data is not correct just because the rule executed as written.",
+          "d": "A longer timeout makes the failure rarer, but whenever the service is down the playbook would still close alerts. The fail-open logic is the defect."
+        },
+        "interview_angle": "Whether you read a playbook run log step by step and notice when a decision used missing data."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Handle errors and exceptions in Azure Logic Apps",
+          "url": "https://learn.microsoft.com/en-us/azure/logic-apps/logic-apps-exception-handling"
+        },
+        {
+          "title": "Microsoft Learn: Learn about investigating data loss prevention alerts",
+          "url": "https://learn.microsoft.com/en-us/purview/dlp-alert-investigation-learn"
+        }
+      ],
+      "source_type": "original",
+      "domain": "soar",
+      "id": "soar-0015",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "enrichment sources",
+      "layer": "L2",
+      "sector": "general",
+      "difficulty": "intermediate",
+      "type": "matching",
+      "tags": [
+        "enrichment",
+        "phishing",
+        "dlp"
+      ],
+      "question": "Match each enrichment question a triage playbook asks to the source that answers it.",
+      "options": {
+        "left": [
+          {
+            "id": "l1",
+            "text": "Was the recipient's domain registered only a few days ago?"
+          },
+          {
+            "id": "l2",
+            "text": "What is the sender's department, and who is their manager?"
+          },
+          {
+            "id": "l3",
+            "text": "Has this attachment's hash been classified as malicious elsewhere?"
+          },
+          {
+            "id": "l4",
+            "text": "Which processes ran on the laptop after the attachment was opened?"
+          },
+          {
+            "id": "l5",
+            "text": "Has this user been involved in earlier DLP cases?"
+          }
+        ],
+        "right": [
+          {
+            "id": "r1",
+            "text": "SOAR or case-management history"
+          },
+          {
+            "id": "r2",
+            "text": "Domain registration data (WHOIS or RDAP)"
+          },
+          {
+            "id": "r3",
+            "text": "EDR telemetry from the device"
+          },
+          {
+            "id": "r4",
+            "text": "Directory or HR system (for example Active Directory or Microsoft Entra ID)"
+          },
+          {
+            "id": "r5",
+            "text": "Threat-intelligence or sandbox reputation service"
+          },
+          {
+            "id": "r6",
+            "text": "Perimeter firewall NAT table"
+          }
+        ]
+      },
+      "answer": {
+        "l1": "r2",
+        "l2": "r4",
+        "l3": "r5",
+        "l4": "r3",
+        "l5": "r1"
+      },
+      "explanation": {
+        "correct": "Registration data gives a domain's creation date, and a newly registered domain is a common phishing signal. The directory or HR system holds organisational facts such as department and manager. Threat-intelligence and sandbox services tell you what the wider world knows about a hash. Only EDR shows what actually happened on this device after the file was opened. Earlier cases for the same user live in the SOAR or case-management history. A NAT table answers none of these questions; it maps internal and external addresses for network connections.",
+        "distractors": {
+          "l4": "A threat-intelligence verdict describes the file in general; it cannot tell you what ran on this particular laptop. That needs EDR telemetry.",
+          "l3": "EDR may flag the file on this device, but whether the hash is known as malicious elsewhere is a threat-intelligence or sandbox question."
+        }
+      },
+      "references": [
+        {
+          "title": "Cortex XSOAR reference: Phishing - Generic v3 playbook",
+          "url": "https://xsoar.pan.dev/docs/reference/playbooks/phishing---generic-v3"
+        }
+      ],
+      "source_type": "original",
+      "domain": "soar",
+      "id": "soar-0016",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "DLP triage playbook enrichment and data minimisation",
+      "layer": "L2",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "multi",
+      "tags": [
+        "dlp",
+        "enrichment",
+        "data-minimisation"
+      ],
+      "question": "A bank's DLP triage playbook builds a task for the analyst so the decision can be made from one screen. Which THREE items belong in that task?",
+      "options": [
+        {
+          "id": "a",
+          "text": "The user's role, department and manager from the directory"
+        },
+        {
+          "id": "b",
+          "text": "Whether the message was blocked, quarantined or delivered"
+        },
+        {
+          "id": "c",
+          "text": "The complete unmasked file content, copied into the ITSM ticket so the analyst does not need access to the DLP console"
+        },
+        {
+          "id": "d",
+          "text": "The matched sensitive information types, with match counts and a masked sample"
+        },
+        {
+          "id": "e",
+          "text": "The user's full web-browsing history for the past year"
+        }
+      ],
+      "answer": [
+        "a",
+        "b",
+        "d"
+      ],
+      "explanation": {
+        "correct": "Role and manager tell the analyst whether the data fits the user's job and who to contact. Delivery status decides the response: a blocked message needs a policy decision, a delivered one means the data has left and the case may become a breach assessment. The matched sensitive information types with counts and a masked sample show what leaked and how much without spreading the data further; the full content stays in the DLP console, where access is restricted and logged.",
+        "distractors": {
+          "c": "ITSM tickets are read by a much wider group (service desk, other teams, sometimes suppliers). Copying 1,900 unmasked IBANs into a ticket creates a second leak of the same data.",
+          "e": "A year of browsing history is out of proportion to a single DLP alert and is personal data the analyst does not need for this decision. Request specific logs if the investigation needs them."
+        },
+        "interview_angle": "Whether you balance giving the analyst enough context with not copying sensitive data into more systems."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Learn about investigating data loss prevention alerts",
+          "url": "https://learn.microsoft.com/en-us/purview/dlp-alert-investigation-learn"
+        }
+      ],
+      "source_type": "original",
+      "domain": "soar",
+      "id": "soar-0017",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "approval timeouts and escalation",
+      "layer": "Engineering",
+      "sector": "mssp-consulting",
+      "difficulty": "intermediate",
+      "type": "truefalse",
+      "tags": [
+        "human-in-the-loop",
+        "approval-gate",
+        "timeout"
+      ],
+      "question": "An MSSP's playbook waits for the client's on-call approver before disabling a compromised account. If the approval step has no timeout, the only consequence of an unanswered request is that this one incident gets handled a little later.",
+      "options": [
+        {
+          "id": "a",
+          "text": "True"
+        },
+        {
+          "id": "b",
+          "text": "False"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "False. Without a timeout the run waits indefinitely and nothing signals the problem: the incident appears to be 'in progress', the attacker keeps access, and across many clients these stalled runs accumulate unnoticed. The step needs a defined response time and a planned outcome when it expires: escalate to a second approver or the MSSP duty manager, or stop safely and raise an alert, with the event recorded in the ticket. Tines' guidance on approval workflows warns that a workflow blocked on a pending approval stalls silently and asks you to decide in advance between escalation and a safe halt with an alert; Splunk SOAR's Prompt block has a required response time setting in minutes.",
+        "distractors": {
+          "a": "It is tempting to see the delay as the only cost, but the real risk is that nobody knows the run is stuck: no alert fires, and the account stays enabled."
+        }
+      },
+      "references": [
+        {
+          "title": "Tines community: How do I build a human-in-the-loop approval workflow?",
+          "url": "https://community.tines.com/t/how-do-i-build-a-human-in-the-loop-approval-workflow/30"
+        },
+        {
+          "title": "Splunk SOAR (On-premises): Require user input using the Prompt block",
+          "url": "https://help.splunk.com/en/splunk-soar/soar-on-premises/build-playbooks/6.2.2/use-the-playbook-editor-to-create-and-view-playbooks-to-automate-analyst-workflows/require-user-input-using-the-prompt-block-in-your-splunk-soar-on-premises-playbook"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "soar",
+      "id": "soar-0018",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "limiting blast radius of automated actions",
+      "layer": "Engineering",
+      "sector": "tech-vendor",
+      "difficulty": "advanced",
+      "type": "single",
+      "tags": [
+        "blast-radius",
+        "automation-failure",
+        "rollout"
+      ],
+      "question": "You work for a security vendor whose product takes automated remediation actions on customer endpoints. A new detection content update is ready to ship. Which control most directly limits the damage if that content produces false positives that trigger destructive actions?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Raise the confidence threshold of all existing detections before the release"
+        },
+        {
+          "id": "b",
+          "text": "Ship the update in rings (internal, then a small share of customers, then everyone) and automatically pause actions when the count of identical actions jumps above a baseline"
+        },
+        {
+          "id": "c",
+          "text": "Prepare a clean-up script to publish once customers report problems, which keeps the release fast"
+        },
+        {
+          "id": "d",
+          "text": "Turn off action logging during the rollout to reduce load on customer endpoints"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "In January 2023 a Microsoft Defender update changed the attack surface reduction rule 'Block Win32 API calls from Office macro' so that it flagged application shortcuts, and shortcuts disappeared from Start menus, desktops and taskbars across many organisations. Microsoft rolled the update back, which took hours to reach every environment, and later published hunting queries and a script to recreate shortcuts. The damage scaled because a wrong detection drove a destructive action everywhere at once. A staged ring rollout means a bad update hits a few machines first, and a circuit breaker on the rate of identical actions (deletions, quarantines) stops the automation before the error spreads. A tested undo path belongs with both.",
+        "distractors": {
+          "a": "Changing existing detections does nothing about the new content and increases missed detections across the product.",
+          "c": "A clean-up script is remediation after the damage, not a way to limit it; in the 2023 case it came after the shortcuts were already gone.",
+          "d": "Logs are how you notice the spike and work out what to undo; turning them off removes both."
+        },
+        "interview_angle": "Whether you treat automated response as something that can cause an outage, and design for it."
+      },
+      "references": [
+        {
+          "title": "BleepingComputer: Microsoft script recreates shortcuts deleted by bad Defender ASR rule",
+          "url": "https://www.bleepingcomputer.com/news/microsoft/microsoft-script-recreates-shortcuts-deleted-by-bad-defender-asr-rule/"
+        }
+      ],
+      "source_type": "scenario-derived",
+      "domain": "soar",
+      "id": "soar-0019",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "reversible response actions",
+      "layer": "Engineering",
+      "sector": "tech-vendor",
+      "difficulty": "advanced",
+      "type": "single",
+      "tags": [
+        "reversibility",
+        "quarantine",
+        "phishing"
+      ],
+      "question": "A SaaS company's SOC is automating the removal of messages from confirmed phishing campaigns. Several designs are proposed. Which one gives the most reliable recovery if the verdict or the search scope later proves wrong?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Hard-delete the messages, since an analyst confirmed the verdict and quarantine only delays removal"
+        },
+        {
+          "id": "b",
+          "text": "Quarantine the messages and, on a false positive, release everything quarantined in the last 24 hours"
+        },
+        {
+          "id": "c",
+          "text": "Soft-delete the messages into users' recoverable items and ask affected users to restore anything they need"
+        },
+        {
+          "id": "d",
+          "text": "Quarantine the messages and record each affected message ID and mailbox in the case, so a paired release action can restore exactly that set"
+        }
+      ],
+      "answer": [
+        "d"
+      ],
+      "explanation": {
+        "correct": "A confirmed verdict can still have the wrong scope: a search may also match a legitimate newsletter or invoice. Recovery is reliable only when the action is reversible and the playbook knows exactly what it touched. Quarantine keeps the messages recoverable, and recording each message ID and mailbox lets a paired release action undo exactly that action. Microsoft documents the same idea for automated investigation and response in Defender for Office 365: SecOps can use Take action to undo a remediation, for example by releasing quarantined messages to their original recipients.",
+        "distractors": {
+          "a": "Analyst confirmation reduces but does not remove errors, and hard deletion removes the way back for the messages that were matched by mistake.",
+          "b": "Releasing everything from the last 24 hours also releases real malware and spam quarantined by other rules.",
+          "c": "Users do not know which messages were removed or whether they mattered, so recovery becomes partial and inconsistent."
+        }
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Report false positives or false negatives following AIR in Defender for Office 365",
+          "url": "https://learn.microsoft.com/en-us/defender-office-365/air-report-false-positives-negatives"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "soar",
+      "id": "soar-0020",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "playbook credentials and permissions",
+      "layer": "Engineering",
+      "sector": "tech-vendor",
+      "difficulty": "basic",
+      "type": "single",
+      "tags": [
+        "least-privilege",
+        "service-account",
+        "playbook-design"
+      ],
+      "question": "A tech company's SOAR playbook needs to disable user accounts and revoke their sessions in the identity provider. How should the credentials the playbook uses be set up?",
+      "options": [
+        {
+          "id": "a",
+          "text": "A dedicated, non-personal identity with only the permissions those actions need, kept in the platform's credential store, with separate identities for staging and production"
+        },
+        {
+          "id": "b",
+          "text": "A global administrator account, so the playbook never fails because of missing permissions"
+        },
+        {
+          "id": "c",
+          "text": "The personal token of the engineer who built the playbook, because it has already been tested"
+        },
+        {
+          "id": "d",
+          "text": "One shared credential for staging and production, so tests behave exactly like production"
+        }
+      ],
+      "answer": [
+        "a"
+      ],
+      "explanation": {
+        "correct": "A playbook acts without a person at the keyboard, so its identity must carry only the permissions it needs, belong to no individual, and be stored where secrets are protected and rotated. Separate staging and production identities ensure a test run cannot change real accounts. On Azure, for example, a Logic Apps workflow can authenticate with a managed identity, so no secret has to be stored in the workflow at all.",
+        "distractors": {
+          "b": "Global admin turns any playbook bug or compromise of the SOAR platform into control of the whole tenant.",
+          "c": "A personal token stops working when the engineer leaves or changes roles, and every action is logged as that person, which breaks the audit trail.",
+          "d": "A shared credential removes the isolation between test and production, so a test can disable real users."
+        }
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Authenticate access with managed identities in Azure Logic Apps",
+          "url": "https://learn.microsoft.com/en-us/azure/logic-apps/create-managed-service-identity"
+        }
+      ],
+      "source_type": "original",
+      "domain": "soar",
+      "id": "soar-0021",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "phishing triage: approving remediation scope",
+      "layer": "L2",
+      "sector": "tech-vendor",
+      "difficulty": "intermediate",
+      "type": "single",
+      "tags": [
+        "phishing",
+        "approval-gate",
+        "search-and-delete"
+      ],
+      "question": "At a software company the phishing playbook has marked a reported email as malicious and paused for approval: \"Search and delete: 140 matching messages. Query: subject contains 'Invoice' AND received in the last 7 days.\" The campaign came from one external sender this morning. What should you do before approving?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Approve: the verdict is malicious, and deleting a few extra messages is an acceptable cost"
+        },
+        {
+          "id": "b",
+          "text": "Approve, then ask users to report any legitimate invoices that disappeared"
+        },
+        {
+          "id": "c",
+          "text": "Narrow the query to the campaign's sender, exact subject and time window, and approve only when the count matches the recipients the campaign reached"
+        },
+        {
+          "id": "d",
+          "text": "Reject the deletion and block the sender's domain instead, because a block is reversible and a deletion is not"
+        }
+      ],
+      "answer": [
+        "c"
+      ],
+      "explanation": {
+        "correct": "The approval is about scope as much as verdict. A query on 'Invoice' over seven days will match real supplier invoices, so some of the 140 hits are probably legitimate business email. Narrow the query to what identifies the campaign (sender address, exact subject, a time window around delivery, or the message ID) and check that the new count fits the number of recipients. Vendor content builds in the same control: in Cortex XSOAR's 'Phishing - Generic v3', search and delete runs pending analyst approval, and the Microsoft Graph search path has an input to search only the incident's recipients or all tenant mailboxes.",
+        "distractors": {
+          "a": "Deleting legitimate invoices disrupts the business and is hard to undo; the cost is not 'a few' messages when the query is this broad.",
+          "b": "Users cannot report what they never saw. Missing invoices surface weeks later as payment problems.",
+          "d": "Blocking stops new messages but leaves the delivered copies in 140 inboxes. Removing the campaign is still needed, just with the right scope."
+        }
+      },
+      "references": [
+        {
+          "title": "Cortex XSOAR reference: Phishing - Generic v3 playbook",
+          "url": "https://xsoar.pan.dev/docs/reference/playbooks/phishing---generic-v3"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "soar",
+      "id": "soar-0022",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "human-in-the-loop containment decision",
+      "layer": "L3",
+      "sector": "finance",
+      "difficulty": "advanced",
+      "type": "single",
+      "tags": [
+        "human-in-the-loop",
+        "proportionality",
+        "dlp"
+      ],
+      "attack": [
+        "T1567.002"
+      ],
+      "question": "A bank's DLP playbook pauses and asks you, the approving senior analyst, to disable the account of a payments operator. Enrichment: one file with 40 customer IBANs uploaded to a personal cloud storage account 10 minutes ago, insider-risk level Low, no earlier cases. It is 15:40 and the operator releases outgoing payments before the 16:30 cut-off. What do you decide?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Approve the account disable now; payments are secondary to the leak"
+        },
+        {
+          "id": "b",
+          "text": "Reject the disable for now; approve blocking that cloud storage service for this user, preserve the evidence, and escalate at once to the operator's manager and the incident manager to establish the business reason and agree any account action"
+        },
+        {
+          "id": "c",
+          "text": "Reject every action and review the alert after the cut-off, so that payments are not disrupted"
+        },
+        {
+          "id": "d",
+          "text": "Approve the disable and also wipe the operator's laptop to remove any local copies of the file"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "The approval is a proportionality decision. The evidence is a single upload of a limited number of records by a user with no history; it may be a policy breach with a business reason or the start of a leak. Blocking the destination for this user stops further uploads through that channel without stopping the payment run, preserving the evidence keeps the case open for HR or legal, and escalating to the manager and incident manager brings in the people who can establish the reason and decide on the account. The upload itself still has to be investigated: if customer data has left the bank, the GDPR assessment starts regardless of the business reason.",
+        "distractors": {
+          "a": "Disabling the account at 15:40 can stop the outgoing payment run, harming customers and the bank, on evidence that does not yet show intent. Escalate the account decision instead.",
+          "c": "Waiting until after the cut-off leaves the upload channel open for another 50 minutes and delays the breach assessment.",
+          "d": "Wiping destroys the evidence you need and is far beyond what one upload justifies."
+        },
+        "interview_angle": "Whether you weigh business impact and evidence strength when you are the human in the loop."
+      },
+      "references": [
+        {
+          "title": "MITRE ATT&CK T1567.002: Exfiltration to Cloud Storage",
+          "url": "https://attack.mitre.org/techniques/T1567/002/"
+        },
+        {
+          "title": "Microsoft Learn: Learn about investigating data loss prevention alerts",
+          "url": "https://learn.microsoft.com/en-us/purview/dlp-alert-investigation-learn"
+        }
+      ],
+      "source_type": "original",
+      "domain": "soar",
+      "id": "soar-0023",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "governance of automated response",
+      "layer": "Governance",
+      "sector": "finance",
+      "difficulty": "advanced",
+      "type": "multi",
+      "tags": [
+        "audit",
+        "change-management",
+        "approval-gate"
+      ],
+      "question": "An internal auditor at a bank asks for evidence that automated response actions in the SOAR platform are under control. Which THREE items answer that request?",
+      "options": [
+        {
+          "id": "a",
+          "text": "An approval matrix stating which playbook actions run automatically, which need approval, and who may approve them"
+        },
+        {
+          "id": "b",
+          "text": "The SOAR vendor's product datasheet describing its security certifications"
+        },
+        {
+          "id": "c",
+          "text": "Per-run audit records showing the trigger, each action taken and its result, and who approved it and when"
+        },
+        {
+          "id": "d",
+          "text": "Change records for each playbook version, with test evidence and who approved its release to production"
+        },
+        {
+          "id": "e",
+          "text": "A screenshot of the current playbook canvas"
+        }
+      ],
+      "answer": [
+        "a",
+        "c",
+        "d"
+      ],
+      "explanation": {
+        "correct": "Auditors look at control design, operation and change. The approval matrix is the design: it shows the bank decided which actions machines may take alone and who is accountable for the rest. Per-run records are proof of operation: each automated or approved action can be traced to a trigger, a result and, where required, a named approver. Version and change records show that logic in production was tested and approved, so a playbook cannot quietly gain new powers.",
+        "distractors": {
+          "b": "A vendor datasheet describes the product, not how the bank configured and governs its own automation.",
+          "e": "A screenshot shows one moment, without version, approval or evidence of what the playbook actually did."
+        },
+        "interview_angle": "Whether you can explain automation governance in terms an auditor recognises: design, operation, change."
+      },
+      "references": [
+        {
+          "title": "NIST SP 800-61 Rev. 3, Incident Response Recommendations and Considerations",
+          "url": "https://csrc.nist.gov/pubs/sp/800/61/r3/final"
+        }
+      ],
+      "source_type": "original",
+      "domain": "soar",
+      "id": "soar-0024",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    }
+  ]
 }

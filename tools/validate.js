@@ -64,6 +64,8 @@ function checkOrdering(errs, q) {
   const ids = checkOptionList(errs, q.options, 'options');
   if (!Array.isArray(q.answer) || !sameSet(q.answer, ids) || new Set(q.answer).size !== ids.length) {
     errs.push('answer must be a permutation of all option ids');
+  } else if (q.answer.every((id, i) => id === ids[i])) {
+    errs.push('options are already in the correct order; shuffle them so Submit alone cannot pass');
   }
   checkDistractors(errs, q.explanation?.distractors, []);
 }

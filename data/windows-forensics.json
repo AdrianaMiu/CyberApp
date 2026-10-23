@@ -1,4 +1,3725 @@
 {
   "domain": "windows-forensics",
-  "questions": []
+  "questions": [
+    {
+      "subtopic": "4624 logon types",
+      "layer": "L1",
+      "sector": "general",
+      "difficulty": "basic",
+      "type": "single",
+      "tags": [
+        "logon-types",
+        "rdp",
+        "security-log"
+      ],
+      "attack": [
+        "T1021.001"
+      ],
+      "question": "A server's Security log shows event 4624 for account t.vasile with Logon Type 10 and Source Network Address 198.51.100.24. How did this session reach the server?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Through a file share or another network resource opened from 198.51.100.24, with no desktop on the server"
+        },
+        {
+          "id": "b",
+          "text": "Through Remote Desktop from 198.51.100.24, giving the user an interactive desktop on the server"
+        },
+        {
+          "id": "c",
+          "text": "At the server's own keyboard, with 198.51.100.24 being the domain controller that checked the password"
+        },
+        {
+          "id": "d",
+          "text": "By unlocking a session that t.vasile had already opened on the server earlier"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "Logon Type 10 (RemoteInteractive) is a logon through Terminal Services / Remote Desktop, and Source Network Address is the client the connection came from. The other common types: 2 Interactive (local console), 3 Network (for example an SMB share or other network access), 5 Service, 7 Unlock, 9 NewCredentials, 11 CachedInteractive. Next steps for an analyst: is t.vasile expected to RDP to this server, and from that address? The session's end is found by matching the Logon ID of this 4624 with 4647/4634.",
+        "distractors": {
+          "a": "Opening a share or another network resource is Logon Type 3 (Network): no desktop session is created.",
+          "c": "A console logon is Logon Type 2. The Source Network Address field is the address the logon came from, not the domain controller that validated it.",
+          "d": "Unlocking an existing session is Logon Type 7 (Unlock)."
+        },
+        "interview_angle": "Whether you can turn a logon type number into the access path, the basis of every lateral-movement question."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: 4624(S) An account was successfully logged on",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4624"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0001",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "4688 command-line auditing",
+      "layer": "L1",
+      "sector": "general",
+      "difficulty": "basic",
+      "type": "single",
+      "tags": [
+        "process-creation",
+        "audit-policy",
+        "logging-readiness"
+      ],
+      "question": "An analyst pivots on event 4688 to see how cmd.exe was launched on a workstation. Every 4688 event has New Process Name and Creator Process Name filled in, but the Process Command Line field is empty. What is the most likely explanation?",
+      "options": [
+        {
+          "id": "a",
+          "text": "The processes ran with elevated rights, and Windows deliberately leaves out the arguments of elevated processes"
+        },
+        {
+          "id": "b",
+          "text": "Sysmon is not installed on the workstation, and event 4688 takes its command-line data from Sysmon"
+        },
+        {
+          "id": "c",
+          "text": "'Include command line in process creation events' is not enabled, so 4688 is written without arguments"
+        },
+        {
+          "id": "d",
+          "text": "The Security log rolled over, and Windows trims older events down to their mandatory fields"
+        }
+      ],
+      "answer": [
+        "c"
+      ],
+      "explanation": {
+        "correct": "Event 4688 needs the Audit Process Creation subcategory (Detailed Tracking). The command line is a separate setting, Administrative Templates\\System\\Audit Process Creation\\Include command line in process creation events, which is not enabled by default; without it the Process Command Line field stays empty. Since 4688 events exist here, process-creation auditing is on and only the command-line setting is missing. Enabling it helps future events only: past arguments cannot be recovered from the Security log, so look at other sources such as Sysmon Event ID 1 (CommandLine), EDR telemetry or PowerShell logs.",
+        "distractors": {
+          "a": "Elevation is recorded in the Token Elevation Type field; it does not suppress the command line.",
+          "b": "4688 is written by Windows auditing. Sysmon writes its own Event ID 1 to a separate log; the two do not depend on each other.",
+          "d": "Rollover removes whole events, oldest first. It does not strip fields from the events that remain."
+        },
+        "interview_angle": "Whether you know which logging has to be switched on before an incident for a question to be answerable."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Command line process auditing",
+          "url": "https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing"
+        },
+        {
+          "title": "Microsoft Learn: 4688(S) A new process has been created",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4688"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0002",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "session duration from 4624 and 4634/4647",
+      "layer": "L2",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "single",
+      "tags": [
+        "logon-session",
+        "timeline",
+        "correlation"
+      ],
+      "question": "For a bank's internal audit you must state how long employee r.dinu was connected through Remote Desktop to a payments jump server on a given day. That day's Security log holds three 4624 events with Logon Type 10 for r.dinu and several 4647 and 4634 events. How do you pair each logon with its logoff?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Pair each 4624 with the next 4634 or 4647 for r.dinu in time order, since a user can hold only one session at a time"
+        },
+        {
+          "id": "b",
+          "text": "Match the Source Port of each 4624 with the port in the logoff events, since each RDP connection uses its own port"
+        },
+        {
+          "id": "c",
+          "text": "Use the 4648 events, which record the start and the end of every session opened with explicit credentials"
+        },
+        {
+          "id": "d",
+          "text": "Match the Logon ID of each 4624 with the Logon ID in 4647/4634 on the same server, and check for reboots in between"
+        }
+      ],
+      "answer": [
+        "d"
+      ],
+      "explanation": {
+        "correct": "The Logon ID (New Logon\\Logon ID, field TargetLogonId) identifies one logon session; 4647 (user initiated logoff) and 4634 (session terminated) carry the same value. Microsoft notes that Logon IDs are only unique between reboots on the same computer, so check for a restart inside the window before pairing. For Remote Desktop and console sessions you will usually see both 4647 and 4634 when the user logs off. Session length = logoff time minus logon time for the same Logon ID. A 4624 with no matching logoff means the session was still open, was disconnected rather than logged off, or the log ended: report that as such instead of guessing.",
+        "distractors": {
+          "a": "A user can hold several sessions at once (reconnections, network logons, other tools), so pairing by time order can mix sessions and produce a wrong duration.",
+          "b": "Logoff events carry no source port; the port is not a session key.",
+          "c": "4648 is logged on the machine where explicit credentials were supplied, at the attempt; it has no session end."
+        },
+        "interview_angle": "Whether you correlate on the session key rather than on user names and timestamps when the numbers go into an audit report."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: 4634(S) An account was logged off",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4634"
+        },
+        {
+          "title": "Microsoft Learn: 4647(S) User initiated logoff",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4647"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0003",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "4663 prerequisites (SACL)",
+      "layer": "L2",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "single",
+      "tags": [
+        "object-access",
+        "sacl",
+        "audit-policy"
+      ],
+      "question": "A bank's GPO enables Success auditing for the 'Audit File System' subcategory on file server FS-TREAS01. While investigating who opened files in D:\\Shares\\Treasury\\M&A, you find no 4663 events for that folder, although other events are logged normally. What is the most likely reason?",
+      "options": [
+        {
+          "id": "a",
+          "text": "The folder has no SACL entries matching the accounts and access types of interest, so nothing was generated"
+        },
+        {
+          "id": "b",
+          "text": "Event 4663 is only written on domain controllers; member file servers record file access as event 5140 instead"
+        },
+        {
+          "id": "c",
+          "text": "Event 4663 is only generated for failed access, so successful reads are never audited by this subcategory"
+        },
+        {
+          "id": "d",
+          "text": "The files were opened over the network, and 4663 only records access by programs running locally on the server itself"
+        }
+      ],
+      "answer": [
+        "a"
+      ],
+      "explanation": {
+        "correct": "Audit File System generates events only for objects that have a SACL whose entries match the account and the type of access (read, write, delete...). The default file-system SACLs generate nothing, so switching the subcategory on is not enough. For future cases, define audit entries on the sensitive folder (for example Success for Read data and Write data). For the current case, look at other sources that may exist: share access 5140/5145 if file-share auditing was enabled, endpoint or EDR telemetry, DLP. In an interview, say clearly that without the SACL the Security log cannot tell you who opened those files.",
+        "distractors": {
+          "b": "4663 is written on any Windows computer that holds the audited object. 5140 is a different event (a network share was accessed) from a different subcategory, Audit File Share.",
+          "c": "4663 records access rights that were actually used and has no failure events; a failed attempt appears as 4656.",
+          "d": "Access over SMB is checked on the server against the same SACL and is audited like local access; the subject is the remote user's network logon session."
+        },
+        "interview_angle": "Whether you know that object-access auditing needs both the policy and a SACL before you promise anyone a list of who opened a file."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Audit File System",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/audit-file-system"
+        },
+        {
+          "title": "Microsoft Learn: 4663(S) An attempt was made to access an object",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4663"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0004",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "USB file-write auditing",
+      "layer": "L3",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "single",
+      "tags": [
+        "usb",
+        "removable-storage",
+        "audit-policy"
+      ],
+      "attack": [
+        "T1052.001"
+      ],
+      "question": "After a near miss, a bank wants Windows Security log evidence of files written to USB sticks on branch PCs that have no endpoint DLP agent. The team has enabled 'Audit File System' and plans to add a SACL to each stick when it is plugged in. What is the better design?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Keep the plan, and add a startup script that sets a SACL on drive letters D: to Z: at every boot"
+        },
+        {
+          "id": "b",
+          "text": "Enable 'Audit PNP Activity' only, because event 6416 lists the files that were copied to the newly connected device"
+        },
+        {
+          "id": "c",
+          "text": "Enable 'Audit Removable Storage', which audits files on removable media with no per-object SACL, then test it"
+        },
+        {
+          "id": "d",
+          "text": "Enable 'Audit Detailed File Share', because Windows presents a USB stick to the system as a local share"
+        }
+      ],
+      "answer": [
+        "c"
+      ],
+      "explanation": {
+        "correct": "Microsoft describes Audit Removable Storage as auditing attempts to access file system objects on a removable storage device, with an event for all objects and all access types and no dependency on the object's SACL. Successful reads and writes are logged as 4663 and failures as 4656. The SACL plan breaks down because many sticks are formatted FAT32 or exFAT, which have no security descriptors to hold a SACL, and drive letters change. After rollout, test with a sample stick on each Windows build in use, filter on WriteData/AppendData to cut read noise, and pair it with Audit PNP Activity (6416) to know which device was connected.",
+        "distractors": {
+          "a": "FAT32/exFAT sticks carry no ACLs at all, and drive letters are reassigned, so many writes would never be audited.",
+          "b": "6416 records that a new external device was recognised (Device ID, Vendor IDs, class). It contains no file names.",
+          "d": "Detailed File Share (5145) covers access to network shares on the server that hosts them; a local USB volume is not reached through a share."
+        },
+        "interview_angle": "Whether you design logging around the evidence you will need, and know which subcategory produces it."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Audit Removable Storage",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/audit-removable-storage"
+        },
+        {
+          "title": "Microsoft Learn: Monitor the use of removable storage devices",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/jj574128(v=ws.11)"
+        },
+        {
+          "title": "Microsoft Learn: 6416(S) A new external device was recognized by the System",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-6416"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0005",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Logon Type 9 (NewCredentials)",
+      "layer": "L3",
+      "sector": "general",
+      "difficulty": "advanced",
+      "type": "single",
+      "tags": [
+        "logon-types",
+        "newcredentials",
+        "lateral-movement"
+      ],
+      "attack": [
+        "T1550.002"
+      ],
+      "question": "On a workstation you find the 4624 event below. What does it establish about the account adm-backup?",
+      "context": "EventID=4624 Computer=WS-ENG-042\nSubjectUserName=d.lungu\nTargetUserName=d.lungu TargetDomainName=CORP\nLogonType=9 LogonProcessName=seclogo AuthenticationPackageName=Negotiate\nTargetOutboundUserName=adm-backup TargetOutboundDomainName=CORP",
+      "options": [
+        {
+          "id": "a",
+          "text": "adm-backup logged on interactively at WS-ENG-042's console, and a domain controller verified its password at that same moment"
+        },
+        {
+          "id": "b",
+          "text": "d.lungu's account was renamed to adm-backup, which is why both names appear in the same event"
+        },
+        {
+          "id": "c",
+          "text": "adm-backup was added to d.lungu's token as a group, giving d.lungu all of its privileges on this workstation"
+        },
+        {
+          "id": "d",
+          "text": "d.lungu keeps the local identity; adm-backup was attached for outbound connections only and is not proven valid here"
+        }
+      ],
+      "answer": [
+        "d"
+      ],
+      "explanation": {
+        "correct": "Logon Type 9 (NewCredentials) means the caller cloned its token and specified new credentials for outbound connections: the session keeps the same local identity (TargetUserName d.lungu), and the alternate account appears in Network Account Name (TargetOutboundUserName). LogonProcessName seclogo points to the Secondary Logon service, the path used by 'runas /netonly'. Those credentials are only used when the process connects to another system, so this event does not prove they were valid. Look on the destinations instead: 4624 (usually type 3) for adm-backup on servers, and authentication events on domain controllers, around the same time. Pass-the-hash tools that start a process with injected credentials produce the same pattern, so treat it as suspicious if adm-backup is not an account d.lungu is supposed to use.",
+        "distractors": {
+          "a": "An interactive logon is type 2. A NewCredentials logon does not check the alternate credentials with a domain controller when the session is created.",
+          "b": "A rename is a separate account-management event; here both names are present because one is the local identity and the other the outbound credential.",
+          "c": "4624 does not record group changes, and adm-backup's rights apply only to connections to other systems, not to the local token."
+        },
+        "interview_angle": "Whether you know that the account in a NewCredentials logon is only claimed locally and has to be confirmed where it was used."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: 4624(S) An account was successfully logged on",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4624"
+        },
+        {
+          "title": "MITRE ATT&CK T1550.002 Pass the Hash",
+          "url": "https://attack.mitre.org/techniques/T1550/002/"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0006",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "process tree reconstruction and PID reuse",
+      "layer": "L3",
+      "sector": "general",
+      "difficulty": "advanced",
+      "type": "single",
+      "tags": [
+        "process-tree",
+        "pid-reuse",
+        "sysmon"
+      ],
+      "question": "You are rebuilding a process tree from 4688 events on a server that has run for 40 days without a reboot. A suspicious rundll32.exe started at 14:10 on 3 March has Creator Process ID 0x1A2C and Creator Process Name powershell.exe. Searching New Process ID 0x1A2C returns two powershell.exe 4688 events: one on 11 February (a monitoring script run by svc_mon) and one at 14:06 on 3 March (user k.ilie, command line with -EncodedCommand). Which conclusion is sound?",
+      "options": [
+        {
+          "id": "a",
+          "text": "The 3 March 14:06 instance: a PID is reused once its process exits, so the latest holder before 14:10 is the parent"
+        },
+        {
+          "id": "b",
+          "text": "The 11 February instance, because a process ID stays bound to the first process that received it until the next reboot"
+        },
+        {
+          "id": "c",
+          "text": "Neither: Creator Process ID holds the session's Logon ID, so the parent must be found through the 4624 events instead"
+        },
+        {
+          "id": "d",
+          "text": "It cannot be decided from 4688, because Creator Process ID is written in hex while New Process ID is written in decimal"
+        }
+      ],
+      "answer": [
+        "a"
+      ],
+      "explanation": {
+        "correct": "Windows reuses process IDs once a process has exited, so on a long-running server one PID can belong to many processes over time. Two processes cannot hold the same PID at the same time: the 11 February instance must have ended before the PID was given to the 14:06 instance, which makes the latest holder before 14:10 the parent. Confirm it with a second key: the Logon ID of rundll32's creator subject should match k.ilie's session, the same one seen in the 14:06 powershell.exe event. Sysmon Event ID 1 avoids the problem altogether: its ProcessGuid (and ParentProcessGuid) is a unique value per process, documented by Microsoft as making correlation easier.",
+        "distractors": {
+          "b": "A PID is not reserved until reboot; it returns to the pool as soon as the process exits.",
+          "c": "Creator Process ID is the process ID of the process that ran the new process. The Logon ID is a separate field.",
+          "d": "Both fields are hexadecimal in 4688, so they can be compared directly; conversion to decimal is only needed to compare with tools such as Task Manager."
+        },
+        "interview_angle": "Whether you know PIDs are not unique over time and verify parent links with a second key."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: 4688(S) A new process has been created",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4688"
+        },
+        {
+          "title": "Microsoft Learn: Sysmon (Sysinternals)",
+          "url": "https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0007",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "4688 token elevation fields",
+      "layer": "L3",
+      "sector": "finance",
+      "difficulty": "advanced",
+      "type": "single",
+      "tags": [
+        "process-creation",
+        "uac",
+        "insider"
+      ],
+      "question": "During a fraud investigation, a bank branch employee states that they never use administrator rights on their PC. You find the 4688 event below on that PC. What does it show?",
+      "context": "EventID=4688 Computer=BR-PC-221\nAccount Name: s.marin\nNew Process Name: C:\\Windows\\System32\\cmd.exe\nToken Elevation Type: %%1937\nMandatory Label: S-1-16-12288",
+      "options": [
+        {
+          "id": "a",
+          "text": "cmd.exe ran with a limited token at medium integrity, which is consistent with the employee's statement"
+        },
+        {
+          "id": "b",
+          "text": "cmd.exe ran as SYSTEM, so malware or a service rather than the user must have started it on the PC"
+        },
+        {
+          "id": "c",
+          "text": "s.marin started cmd.exe elevated at high integrity, as 'Run as administrator' does, so the account held admin rights"
+        },
+        {
+          "id": "d",
+          "text": "A UAC prompt appeared and was declined by the user, and Windows logged the attempt just before it cancelled the process"
+        }
+      ],
+      "answer": [
+        "c"
+      ],
+      "explanation": {
+        "correct": "%%1937 is Token Elevation Type 2: an elevated token with no privileges removed, used when UAC is on and the user starts a program with 'Run as administrator' (or the program always requires admin and the user is in Administrators). Mandatory Label S-1-16-12288 is High integrity. The event therefore puts an elevated, administrative cmd.exe under s.marin, which contradicts the statement. Next steps: how the account obtained admin rights (local Administrators membership; 4732 if group changes were audited), what the elevated cmd.exe launched (child 4688 events whose Creator Process ID equals its New Process ID), and whether the session was really the employee's (Logon ID back to 4624, logon type and source). Report what the account did; who sat at the keyboard is a separate question.",
+        "distractors": {
+          "a": "A limited token is %%1938 (Type 3) and medium integrity is S-1-16-8192; neither appears here.",
+          "b": "System integrity is S-1-16-16384 and the account would be SYSTEM; the event shows s.marin at High integrity.",
+          "d": "4688 is written when a process is created. A declined UAC prompt creates no elevated process, so there would be no such event."
+        },
+        "interview_angle": "Whether you read token fields precisely, which matters when the evidence may reach HR or court."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: 4688(S) A new process has been created",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4688"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0008",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "4104 script block logging and encoded commands",
+      "layer": "L3",
+      "sector": "tech-vendor",
+      "difficulty": "intermediate",
+      "type": "single",
+      "tags": [
+        "powershell",
+        "script-block-logging",
+        "obfuscation"
+      ],
+      "attack": [
+        "T1059.001",
+        "T1027.010"
+      ],
+      "question": "At a software company, an alert shows a process event with the command line 'powershell.exe -NoProfile -EncodedCommand <long Base64 string>'. Script block logging is enabled by policy on the host. Where is the most reliable place to read the code PowerShell actually ran?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Decode the Base64 string from the command line; that string is the complete code that the PowerShell process executed"
+        },
+        {
+          "id": "b",
+          "text": "The PSReadLine console history file, which keeps every command run by any PowerShell process on the host"
+        },
+        {
+          "id": "c",
+          "text": "The PowerShell transcript, which Windows writes by default to each user's Documents folder for every session"
+        },
+        {
+          "id": "d",
+          "text": "Event 4104 in the PowerShell Operational log, which records each script block as compiled, including run-time code"
+        }
+      ],
+      "answer": [
+        "d"
+      ],
+      "explanation": {
+        "correct": "-EncodedCommand carries Base64 of UTF-16LE text, and decoding it shows only the outer layer. Obfuscated scripts often build further code while running (decompression, string building, Invoke-Expression), and that code is not in the command line. With script block logging, PowerShell records the content of every script block it processes as event 4104, and Microsoft notes that dynamically generated script blocks are logged too, so each layer appears as it runs. Long scripts are split over several 4104 events ('Creating Scriptblock text (1 of N)') that share a ScriptBlock ID: put them back together in order before reading.",
+        "distractors": {
+          "a": "Decoding is useful for triage, but stages built at run time are not in the command line.",
+          "b": "PSReadLine history records commands typed in interactive consoles, not code passed non-interactively with -EncodedCommand.",
+          "c": "Transcription is off unless it is enabled by policy ('Turn on PowerShell Transcription') or started with Start-Transcript; it is not written for every session by default."
+        },
+        "interview_angle": "Whether you know where the deobfuscated code is recorded instead of stopping at the encoded command line."
+      },
+      "references": [
+        {
+          "title": "Microsoft PowerShell Team: PowerShell the Blue Team",
+          "url": "https://devblogs.microsoft.com/powershell/powershell-the-blue-team/"
+        },
+        {
+          "title": "MITRE ATT&CK T1059.001 PowerShell",
+          "url": "https://attack.mitre.org/techniques/T1059/001/"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0009",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "PowerShell 2.0 downgrade and missing 4104",
+      "layer": "L3",
+      "sector": "mssp-consulting",
+      "difficulty": "advanced",
+      "type": "single",
+      "tags": [
+        "powershell",
+        "downgrade",
+        "logging-gaps"
+      ],
+      "attack": [
+        "T1689",
+        "T1059.001"
+      ],
+      "question": "Script block logging is enabled by GPO on a client's Windows 10 host, yet the MSSP finds no 4104 events for the session below. What is the best explanation?",
+      "context": "Sysmon Event ID 1, host WS-LEGAL-07\nImage: C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe\nCommandLine: powershell.exe -Version 2 -NoProfile -ExecutionPolicy Bypass -File C:\\Users\\Public\\s.ps1\n\nMicrosoft-Windows-PowerShell/Operational: no 4104 events between 09:00 and 11:00\nWindows PowerShell log, event 400 at 09:41: ... HostVersion=2.0 ... EngineVersion=2.0 ... HostApplication=powershell.exe -Version 2 -NoProfile ...",
+      "options": [
+        {
+          "id": "a",
+          "text": "It ran on the PowerShell 2.0 engine, which has no script block logging; event 400 shows the engine version"
+        },
+        {
+          "id": "b",
+          "text": "-ExecutionPolicy Bypass switches off script block logging for the whole session in which it is used on the command line"
+        },
+        {
+          "id": "c",
+          "text": "Script block logging records only commands typed interactively, not scripts started with -File"
+        },
+        {
+          "id": "d",
+          "text": "The 4104 events went to the Sysmon log instead, because Sysmon was installed after the GPO was applied"
+        }
+      ],
+      "answer": [
+        "a"
+      ],
+      "explanation": {
+        "correct": "Script block logging arrived with PowerShell 5; the 2.0 engine predates it. Where the optional Windows PowerShell 2.0 component and the .NET Framework 3.5 it needs are installed, '-Version 2' runs code without any 4104: a downgrade attack, ATT&CK T1689 Downgrade Attack (T1562.010 before ATT&CK v20). Event 400 in the classic 'Windows PowerShell' log records EngineVersion at engine start, which gives a detection: EngineVersion 2.0, or '-Version 2' in process command lines. Fixes: remove the PowerShell 2.0 component and hunt for the same pattern on other hosts. The missing 4104 is itself a finding to report to the client.",
+        "distractors": {
+          "b": "Execution policy only decides which scripts may run; it is not a security boundary and does not control logging.",
+          "c": "Script block logging covers commands, script blocks, functions and scripts, whether run interactively or through automation.",
+          "d": "Sysmon does not receive PowerShell's events; 4104 is written only to Microsoft-Windows-PowerShell/Operational."
+        },
+        "interview_angle": "Whether you treat a logging gap as evidence and know how attackers create one."
+      },
+      "references": [
+        {
+          "title": "MITRE ATT&CK T1689 Downgrade Attack",
+          "url": "https://attack.mitre.org/techniques/T1689/"
+        },
+        {
+          "title": "Microsoft PowerShell Team: PowerShell the Blue Team",
+          "url": "https://devblogs.microsoft.com/powershell/powershell-the-blue-team/"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0010",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "4648 explicit credentials on the source host",
+      "layer": "L3",
+      "sector": "mssp-consulting",
+      "difficulty": "advanced",
+      "type": "single",
+      "tags": [
+        "explicit-credentials",
+        "lateral-movement",
+        "pivot"
+      ],
+      "attack": [
+        "T1078.002",
+        "T1021.002"
+      ],
+      "question": "An MSSP analyst sees the 4648 event below on a client workstation. Where should the next query go to learn what adm-sql actually did?",
+      "context": "Security log, workstation WS-OPS-12\n10:14:07 EventID=4648\n  Subject: AccountName=v.stoica LogonID=0x3F2A11\n  Account Whose Credentials Were Used: AccountName=adm-sql\n  Target Server: TargetServerName=DB-CORE01",
+      "options": [
+        {
+          "id": "a",
+          "text": "WS-OPS-12's own 4624 events for adm-sql, because 4648 is always followed by a local logon of that account"
+        },
+        {
+          "id": "b",
+          "text": "The domain controllers' 4720 events, because 4648 means adm-sql was created for this connection"
+        },
+        {
+          "id": "c",
+          "text": "DB-CORE01's Security log: 4624 for adm-sql near 10:14 from WS-OPS-12, then follow that session's Logon ID"
+        },
+        {
+          "id": "d",
+          "text": "WS-OPS-12's 4672 events for v.stoica, because 4648 records that v.stoica received adm-sql's privileges locally"
+        }
+      ],
+      "answer": [
+        "c"
+      ],
+      "explanation": {
+        "correct": "4648 is written on the computer where a process tried to log on by explicitly supplying an account's credentials (runas, mapping a share with another user, admin tools). It names who supplied them (v.stoica), whose credentials were used (adm-sql) and the target server (DB-CORE01). The resulting session is created on the target, and 4624 is generated on the computer that was accessed. So query DB-CORE01 for 4624 (likely Logon Type 3) for adm-sql at about 10:14 with WS-OPS-12's address, then follow its Logon ID into 4672, share access and process creation on that server, plus authentication events on the domain controllers. Microsoft notes 4648 also occurs routinely (scheduled tasks, runas), so the key question is whether v.stoica should know adm-sql's password at all.",
+        "distractors": {
+          "a": "The target server is DB-CORE01, not localhost, so the session for those credentials is created there, not on the workstation.",
+          "b": "Account creation is 4720; 4648 uses an account that already exists.",
+          "d": "4648 grants nothing. 4672 is logged where the privileged session is created, which here is the target server."
+        },
+        "interview_angle": "Whether you know on which side of a connection each logon event is written."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: 4648(S) A logon was attempted using explicit credentials",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4648"
+        },
+        {
+          "title": "Microsoft Learn: 4624(S) An account was successfully logged on",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4624"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0011",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Sysmon Event ID 1 OriginalFileName",
+      "layer": "L3",
+      "sector": "tech-vendor",
+      "difficulty": "advanced",
+      "type": "single",
+      "tags": [
+        "sysmon",
+        "masquerading",
+        "detection-gap"
+      ],
+      "attack": [
+        "T1036.003"
+      ],
+      "question": "On a software vendor's build agent, a detection rule that looks for Image ending in '\\powershell.exe' did not fire for the event below. What does the event show?",
+      "context": "Sysmon Event ID 1 (Process Create), host BUILD-AG-04\nUtcTime: 2026-09-18 02:14:51.233\nImage: C:\\ProgramData\\AgentCache\\taskhelper.exe\nOriginalFileName: PowerShell.EXE\nCompany: Microsoft Corporation\nCommandLine: taskhelper.exe -nop -w hidden -c <command redacted>\nParentImage: C:\\Windows\\System32\\cmd.exe\nUser: CORP\\svc-build\nHashes: SHA256=<same hash as powershell.exe on this Windows build>",
+      "options": [
+        {
+          "id": "a",
+          "text": "A legitimate build helper: the Company field shows the file is signed by Microsoft, so it can be allowed"
+        },
+        {
+          "id": "b",
+          "text": "A renamed PowerShell copy; OriginalFileName comes from the file's version resource, so rules should also match on it"
+        },
+        {
+          "id": "c",
+          "text": "A Sysmon labelling error: OriginalFileName is copied from the parent process, so cmd.exe started PowerShell under the wrong name"
+        },
+        {
+          "id": "d",
+          "text": "File-less execution: the code ran only in memory, and Image is a placeholder path Sysmon writes when no file exists"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "OriginalFileName is read from the PE file's version information, which does not change when the file is renamed. Together with a hash equal to the genuine powershell.exe, it identifies a renamed PowerShell copy running from ProgramData under a harmless-looking name: ATT&CK T1036.003 Rename Legitimate Utilities. A rule keyed on the image path misses it; detections should also match OriginalFileName and known hashes. Next: find who created the copy (Sysmon Event ID 11 for that path), what the hidden command did (4104 on this host if script block logging is on), and why svc-build ran it at 02:14.",
+        "distractors": {
+          "a": "Company is a text field inside the file, not a signature check. Here the binary is genuine Microsoft code, which is exactly why it is being reused to avoid name-based rules.",
+          "c": "OriginalFileName describes the Image file itself; the parent appears separately in ParentImage.",
+          "d": "Image is the path of the executable that was started, and a real file exists in ProgramData here."
+        },
+        "interview_angle": "Whether your detections still work after a simple rename."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Sysmon (Sysinternals)",
+          "url": "https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon"
+        },
+        {
+          "title": "MITRE ATT&CK T1036.003 Rename Legitimate Utilities",
+          "url": "https://attack.mitre.org/techniques/T1036/003/"
+        }
+      ],
+      "source_type": "scenario-derived",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0012",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "command-line auditing rollout risks",
+      "layer": "Engineering",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "single",
+      "tags": [
+        "process-creation",
+        "audit-policy",
+        "data-protection"
+      ],
+      "question": "A bank's detection engineering team is about to enable 'Include command line in process creation events' on all servers and forward 4688 to the SIEM. Which risk must the rollout plan address?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Enabling the setting disables Sysmon Event ID 1 on the same host, so every Sysmon-based rule will stop firing"
+        },
+        {
+          "id": "b",
+          "text": "Command lines can contain passwords, tokens or client data in clear text, which then sit in the logs and the SIEM"
+        },
+        {
+          "id": "c",
+          "text": "Windows blocks any process whose command line is longer than the audit field can store"
+        },
+        {
+          "id": "d",
+          "text": "Command lines are only recorded for processes started by administrators, so ordinary user activity stays invisible"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "Microsoft warns that once the setting is on, anyone who can read the Security events can read the arguments of every process created, and those arguments can include passwords or private data. In a bank that means service-account passwords passed to scripts and tools, connection strings, or customer identifiers in batch jobs, all copied into the SIEM. The plan should therefore restrict access to raw Security logs and SIEM indexes, add a detection for secrets in command lines (each hit means a credential to rotate and a script to fix), and align retention with data-protection rules. Also confirm the advanced audit policy is not overwritten by basic settings (Microsoft points to event 4719 for this).",
+        "distractors": {
+          "a": "4688 and Sysmon are independent sources; enabling one does not affect the other.",
+          "c": "Auditing records activity; it never blocks a process.",
+          "d": "The command line is logged for every successfully created process, whoever starts it."
+        },
+        "interview_angle": "Whether you see logging itself as a data-protection risk in a regulated environment."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Command line process auditing",
+          "url": "https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0013",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "logging prerequisites for process and task questions",
+      "layer": "Engineering",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "multi",
+      "tags": [
+        "audit-policy",
+        "logging-readiness",
+        "scheduled-task"
+      ],
+      "question": "A bank's IR team wants the Windows Security log alone to answer two questions in future cases: 'which command line did the user run?' and 'who created this scheduled task and what does it run?'. Which three settings are required? (Choose 3)",
+      "options": [
+        {
+          "id": "a",
+          "text": "Audit Process Creation (Detailed Tracking), Success"
+        },
+        {
+          "id": "b",
+          "text": "Audit File System, Success, with a SACL on C:\\Windows\\System32\\Tasks, where Windows stores the task definition files"
+        },
+        {
+          "id": "c",
+          "text": "Administrative Templates\\System\\Audit Process Creation: 'Include command line in process creation events'"
+        },
+        {
+          "id": "d",
+          "text": "Audit PNP Activity, Success"
+        },
+        {
+          "id": "e",
+          "text": "Audit Other Object Access Events, Success"
+        }
+      ],
+      "answer": [
+        "a",
+        "c",
+        "e"
+      ],
+      "explanation": {
+        "correct": "Event 4688 exists only if Audit Process Creation is enabled, and its Process Command Line field is filled only when the separate 'Include command line in process creation events' setting is on. Event 4698 (a scheduled task was created), together with 4699-4702 for delete, enable, disable and update, belongs to Audit Other Object Access Events; it records the subject who registered the task and the task's XML, including the command and arguments. Microsoft recommends Success auditing for this subcategory mainly because of these task events. After deployment, check the effective policy with 'auditpol /get /category:*' and make sure basic audit settings do not override the advanced ones.",
+        "distractors": {
+          "b": "This would record file access to the task files, not a structured record of the task, its creator and its action; it is not needed when 4698 is enabled.",
+          "d": "Audit PNP Activity produces device events such as 6416 (new external device); it says nothing about commands or tasks."
+        },
+        "interview_angle": "Whether you can turn an investigation question into the exact audit settings that answer it."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Audit Other Object Access Events",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/audit-other-object-access-events"
+        },
+        {
+          "title": "Microsoft Learn: Command line process auditing",
+          "url": "https://learn.microsoft.com/en-us/windows-server/identity/ad-ds/manage/component-updates/command-line-process-auditing"
+        },
+        {
+          "title": "Microsoft Learn: Audit Process Creation",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/audit-process-creation"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0014",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "evidence that survives a cleared Security log",
+      "layer": "L3",
+      "sector": "mssp-consulting",
+      "difficulty": "advanced",
+      "type": "multi",
+      "tags": [
+        "log-clearing",
+        "anti-forensics",
+        "evidence-sources"
+      ],
+      "attack": [
+        "T1685.005"
+      ],
+      "question": "On a client server, the Security log starts with event 1102 at 03:12, logged under account adm-ops, and holds nothing older. Which sources may still contain evidence of what happened on the server before 03:12? (Choose 3)",
+      "options": [
+        {
+          "id": "a",
+          "text": "Security events already forwarded to the SIEM or a Windows Event Forwarding collector before the clear"
+        },
+        {
+          "id": "b",
+          "text": "The details of the 1102 event, which list the deleted records and their event IDs"
+        },
+        {
+          "id": "c",
+          "text": "The server's Sysmon Operational log, unless it was also cleared (a System-log 104 event would show that)"
+        },
+        {
+          "id": "d",
+          "text": "Authentication events on the domain controllers for adm-ops and for logons to this server"
+        },
+        {
+          "id": "e",
+          "text": "The 4688 event for the clearing command, which Windows writes into the new Security log immediately after 1102"
+        }
+      ],
+      "answer": [
+        "a",
+        "c",
+        "d"
+      ],
+      "explanation": {
+        "correct": "1102 records that the Security log was cleared and by whom (the subject's account and Logon ID); nothing else. Every older record in the local Security log is gone, including the 4688 of the clearing command itself, which was written before the clear. Evidence survives elsewhere: copies already forwarded to a SIEM or WEF collector; other logs on the host, such as Sysmon Operational or PowerShell Operational, which are separate files (clearing them leaves event 104 in the System log); and domain controller authentication events for adm-ops and this server. Map it to ATT&CK T1685.005 Clear Windows Event Logs (T1070.001 before ATT&CK v20) and treat adm-ops as compromised until shown otherwise.",
+        "distractors": {
+          "b": "1102 contains only the subject fields (who cleared the log); it holds no list or count of deleted records.",
+          "e": "The process that cleared the log was created before the clear, so its 4688 was in the old log and was erased with it."
+        },
+        "interview_angle": "Whether a cleared log makes you stop, or makes you look for the copies."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: 1102(S) The audit log was cleared",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-1102"
+        },
+        {
+          "title": "MITRE ATT&CK T1685.005 Clear Windows Event Logs",
+          "url": "https://attack.mitre.org/techniques/T1685/005/"
+        }
+      ],
+      "source_type": "scenario-derived",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0015",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "admin rights in a logon session",
+      "layer": "L2",
+      "sector": "general",
+      "difficulty": "basic",
+      "type": "multi",
+      "tags": [
+        "privileged-logon",
+        "logon-session",
+        "security-log"
+      ],
+      "question": "You need to know whether a remote session on a server ran with administrative rights. Which two pieces of Security log evidence show that? (Choose 2)",
+      "options": [
+        {
+          "id": "a",
+          "text": "Authentication Package = Kerberos in the session's 4624 event, rather than NTLM"
+        },
+        {
+          "id": "b",
+          "text": "Elevated Token = Yes in the session's 4624 event"
+        },
+        {
+          "id": "c",
+          "text": "Logon Type = 10 in the session's 4624 event"
+        },
+        {
+          "id": "d",
+          "text": "A 4672 event sharing the 4624's Logon ID, listing privileges such as SeDebugPrivilege"
+        },
+        {
+          "id": "e",
+          "text": "Impersonation Level = Impersonation in the session's 4624 event rather than Identification"
+        }
+      ],
+      "answer": [
+        "b",
+        "d"
+      ],
+      "explanation": {
+        "correct": "Elevated Token = Yes (a 4624 field since Windows 10 / Server 2016) means the session is elevated and has administrator privileges; Microsoft suggests monitoring it to track admin logons. 4672 (special privileges assigned to new logon) is written when sensitive privileges such as SeDebugPrivilege, SeBackupPrivilege or SeTakeOwnershipPrivilege are given to a new session, and it is linked to the 4624 by Logon ID. Remember that every SYSTEM logon also triggers 4672, so filter machine and service accounts before counting.",
+        "distractors": {
+          "a": "Kerberos or NTLM is the authentication protocol; it says nothing about the rights of the session.",
+          "c": "Type 10 shows a Remote Desktop logon; standard users in Remote Desktop Users get the same type.",
+          "e": "Impersonation is the most common level for ordinary logons; it describes what the server process may do with the client's identity, not admin rights."
+        },
+        "interview_angle": "Whether you prove privilege from evidence instead of guessing it from the account name."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: 4624(S) An account was successfully logged on",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4624"
+        },
+        {
+          "title": "Microsoft Learn: 4672(S) Special privileges assigned to new logon",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4672"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0016",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "automatic script block logging",
+      "layer": "L2",
+      "sector": "tech-vendor",
+      "difficulty": "intermediate",
+      "type": "truefalse",
+      "tags": [
+        "powershell",
+        "script-block-logging",
+        "logging-readiness"
+      ],
+      "attack": [
+        "T1059.001"
+      ],
+      "question": "A SaaS company never configured the script block logging policy on its Windows 10 laptops (it is 'Not Configured'), which run Windows PowerShell 5.1. True or false: on these laptops PowerShell writes no 4104 events at all, so there is no point searching for them during an investigation.",
+      "options": [
+        {
+          "id": "a",
+          "text": "True"
+        },
+        {
+          "id": "b",
+          "text": "False"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "False. Since PowerShell 5, when script block logging has not been enabled, PowerShell still logs script blocks whose content is often used by malicious scripts. Microsoft calls this a record of last resort for organisations that enable logging too late; only setting the policy to 'Disabled' (or EnableScriptBlockLogging = 0) turns it off. So search Microsoft-Windows-PowerShell/Operational for 4104 even where the policy was never set. The coverage is partial: only suspicious-looking blocks are kept, so their absence proves nothing, and full script block logging should still be enabled.",
+        "distractors": {
+          "a": "This is the common assumption, but automatic logging of suspicious script blocks is on unless the policy is explicitly set to Disabled."
+        },
+        "interview_angle": "Whether you check for evidence before assuming it does not exist."
+      },
+      "references": [
+        {
+          "title": "Microsoft PowerShell Team: PowerShell the Blue Team",
+          "url": "https://devblogs.microsoft.com/powershell/powershell-the-blue-team/"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0017",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "timeline across sources and time zones",
+      "layer": "L3",
+      "sector": "finance",
+      "difficulty": "advanced",
+      "type": "ordering",
+      "tags": [
+        "timeline",
+        "time-zones",
+        "usb"
+      ],
+      "attack": [
+        "T1560.001",
+        "T1052.001"
+      ],
+      "question": "You are building a timeline for a suspected theft of client data from a bank's branch PC in Bucharest (UTC+2 in January). The Security events are shown as Event Viewer displayed them on that PC, in its local time; the Sysmon values are its UtcTime field. Put the events in the order in which they happened.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Sysmon Event ID 1, UtcTime 08:05:40: rar.exe starts with a command line that archives a client folder into C:\\Users\\i.popa\\AppData\\Local\\Temp\\q4.rar"
+        },
+        {
+          "id": "b",
+          "text": "Security 4624, Logon Type 2 for i.popa, displayed 09:58:12"
+        },
+        {
+          "id": "c",
+          "text": "Sysmon Event ID 11, UtcTime 08:12:03: explorer.exe creates E:\\q4.rar"
+        },
+        {
+          "id": "d",
+          "text": "Security 6416, a USB mass storage device is recognised, displayed 10:09:55"
+        },
+        {
+          "id": "e",
+          "text": "Security 4647, user-initiated logoff for i.popa, displayed 10:20:30"
+        }
+      ],
+      "answer": [
+        "b",
+        "a",
+        "d",
+        "c",
+        "e"
+      ],
+      "explanation": {
+        "correct": "Windows stores event timestamps in UTC and Event Viewer converts them to local time for display, while Sysmon's UtcTime field is already UTC. Converting the Security entries (minus 2 hours in January) gives: 07:58:12 logon (4624 type 2), 08:05:40 archive created with rar.exe, 08:09:55 USB stick recognised (6416), 08:12:03 the archive written to E: (Sysmon 11), 08:20:30 logoff (4647). Read in display order without conversion, the archive and the copy would seem to happen before the user logged on, which is impossible. The story: data staged in an archive (T1560.001) before the stick was plugged in, then copied to it about two minutes after recognition (T1052.001). Good practice: keep one UTC column in the timeline, keep each source's original value and time zone, and watch daylight saving (Romania is UTC+3 in summer) and clock drift.",
+        "distractors": {}
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Sysmon (Sysinternals)",
+          "url": "https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon"
+        },
+        {
+          "title": "MITRE ATT&CK T1052.001 Exfiltration over USB",
+          "url": "https://attack.mitre.org/techniques/T1052/001/"
+        }
+      ],
+      "source_type": "scenario-derived",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0018",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "process chain from 4688 process IDs",
+      "layer": "L2",
+      "sector": "mssp-consulting",
+      "difficulty": "intermediate",
+      "type": "ordering",
+      "tags": [
+        "process-tree",
+        "process-creation",
+        "triage"
+      ],
+      "attack": [
+        "T1204.002",
+        "T1059.001",
+        "T1218.011"
+      ],
+      "question": "An MSSP analyst's export of five 4688 events from workstation WS-PAY-031 lost its time column during conversion; only the fields below remain. Explorer.exe on that host has process ID 0x1A10. Using New Process ID and Creator Process ID, put the processes in the order in which they were created.",
+      "options": [
+        {
+          "id": "a",
+          "text": "powershell.exe: New Process ID 0x2F18, Creator Process ID 0x22D4"
+        },
+        {
+          "id": "b",
+          "text": "whoami.exe: New Process ID 0x0F90, Creator Process ID 0x1B5C"
+        },
+        {
+          "id": "c",
+          "text": "winword.exe: New Process ID 0x0E6C, Creator Process ID 0x1A10"
+        },
+        {
+          "id": "d",
+          "text": "rundll32.exe: New Process ID 0x1B5C, Creator Process ID 0x2F18"
+        },
+        {
+          "id": "e",
+          "text": "cmd.exe: New Process ID 0x22D4, Creator Process ID 0x0E6C"
+        }
+      ],
+      "answer": [
+        "c",
+        "e",
+        "a",
+        "d",
+        "b"
+      ],
+      "explanation": {
+        "correct": "A child process is always created after its parent, so follow the chain from the process whose creator is outside the set: winword.exe (created by explorer.exe 0x1A10) created cmd.exe (Creator 0x0E6C), which created powershell.exe (Creator 0x22D4), which created rundll32.exe (Creator 0x2F18), which created whoami.exe (Creator 0x1B5C). Both PID fields are hexadecimal in 4688, so they can be matched as written. The chain reads as a document opened by the user (T1204.002) launching a shell and PowerShell (T1059.001), proxy execution through rundll32 (T1218.011) and a first discovery command. Because PIDs are reused, confirm the links with the original timestamps once the evtx files are re-exported.",
+        "distractors": {}
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: 4688(S) A new process has been created",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4688"
+        },
+        {
+          "title": "MITRE ATT&CK T1218.011 Rundll32",
+          "url": "https://attack.mitre.org/techniques/T1218/011/"
+        }
+      ],
+      "source_type": "scenario-derived",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0019",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "core Security log event IDs",
+      "layer": "L1",
+      "sector": "general",
+      "difficulty": "basic",
+      "type": "matching",
+      "tags": [
+        "event-ids",
+        "security-log"
+      ],
+      "question": "Match each Windows Security log event ID to what it tells an analyst.",
+      "options": {
+        "left": [
+          {
+            "id": "l1",
+            "text": "4625"
+          },
+          {
+            "id": "l2",
+            "text": "4688"
+          },
+          {
+            "id": "l3",
+            "text": "4698"
+          },
+          {
+            "id": "l4",
+            "text": "1102"
+          },
+          {
+            "id": "l5",
+            "text": "4663"
+          }
+        ],
+        "right": [
+          {
+            "id": "r1",
+            "text": "A scheduled task was created; the event holds the task's XML, including what it runs"
+          },
+          {
+            "id": "r2",
+            "text": "An access right on an audited object, such as a file or registry key, was actually used"
+          },
+          {
+            "id": "r3",
+            "text": "A logon attempt failed; Status and Sub Status give the reason"
+          },
+          {
+            "id": "r4",
+            "text": "The Security log was cleared, and by which account"
+          },
+          {
+            "id": "r5",
+            "text": "A new process was created, with its creator and, if enabled, its command line"
+          },
+          {
+            "id": "r6",
+            "text": "A new service was installed on the system"
+          }
+        ]
+      },
+      "answer": {
+        "l1": "r3",
+        "l2": "r5",
+        "l3": "r1",
+        "l4": "r4",
+        "l5": "r2"
+      },
+      "explanation": {
+        "correct": "4625 is a failed logon (Sub Status such as 0xC000006A, bad password, or 0xC0000064, unknown user name). 4688 is process creation (needs Audit Process Creation; command line needs a separate policy). 4698 is scheduled task creation (Audit Other Object Access Events), with the task XML in Task Content. 1102 means the Security log was cleared and names the account that did it. 4663 means an access right was used on an object that is audited (a SACL on files, folders or registry keys, or any object on removable storage when Audit Removable Storage is on).",
+        "distractors": {
+          "l3": "4698 is task creation. A newly installed service is a different persistence path: 4697 in the Security log, or 7045 in the System log.",
+          "l4": "1102 covers the Security log only; clearing another log is recorded as event 104 in the System log."
+        }
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: 4698(S) A scheduled task was created",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4698"
+        },
+        {
+          "title": "Microsoft Learn: 1102(S) The audit log was cleared",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-1102"
+        },
+        {
+          "title": "Microsoft Learn: 4663(S) An attempt was made to access an object",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4663"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0020",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "account, group and privilege events",
+      "layer": "L2",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "matching",
+      "tags": [
+        "event-ids",
+        "account-management",
+        "privileged-access"
+      ],
+      "attack": [
+        "T1136.001",
+        "T1098"
+      ],
+      "question": "During a privileged-access review at a bank, match each Security event ID to what it records.",
+      "options": {
+        "left": [
+          {
+            "id": "l1",
+            "text": "4720"
+          },
+          {
+            "id": "l2",
+            "text": "4732"
+          },
+          {
+            "id": "l3",
+            "text": "4672"
+          },
+          {
+            "id": "l4",
+            "text": "4648"
+          },
+          {
+            "id": "l5",
+            "text": "4647"
+          }
+        ],
+        "right": [
+          {
+            "id": "r1",
+            "text": "A member was added to a security-enabled local group, such as a server's Administrators group"
+          },
+          {
+            "id": "r2",
+            "text": "A member was added to a security-enabled global group, such as Domain Admins"
+          },
+          {
+            "id": "r3",
+            "text": "A user account was created"
+          },
+          {
+            "id": "r4",
+            "text": "Sensitive privileges were assigned to a new logon session"
+          },
+          {
+            "id": "r5",
+            "text": "A process attempted a logon by explicitly supplying an account's credentials"
+          },
+          {
+            "id": "r6",
+            "text": "A user initiated a logoff"
+          }
+        ]
+      },
+      "answer": {
+        "l1": "r3",
+        "l2": "r1",
+        "l3": "r4",
+        "l4": "r5",
+        "l5": "r6"
+      },
+      "explanation": {
+        "correct": "4720: user account created. 4732: member added to a security-enabled local group, including built-in groups such as Administrators (one event per member added). 4672: special privileges (SeDebugPrivilege, SeBackupPrivilege and similar) assigned to a new logon, linked to its 4624 by Logon ID. 4648: logon attempted with explicit credentials, written on the machine where the credentials were supplied. 4647: user-initiated logoff, typical of interactive and Remote Desktop sessions. In a review, 4720 followed by 4732 into Administrators outside a change window is a classic persistence pattern (T1136.001, T1098).",
+        "distractors": {
+          "l2": "4732 is for local groups. Domain Admins is a global group, and adding a member to it is 4728 on a domain controller; universal groups use 4756.",
+          "l3": "4672 is not a group change: it marks a logon that received sensitive privileges, and every SYSTEM logon triggers it too."
+        }
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Audit Security Group Management",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/audit-security-group-management"
+        },
+        {
+          "title": "Microsoft Learn: 4672(S) Special privileges assigned to new logon",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4672"
+        },
+        {
+          "title": "Microsoft Learn: 4648(S) A logon was attempted using explicit credentials",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4648"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0021",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Sysmon event IDs",
+      "layer": "L2",
+      "sector": "tech-vendor",
+      "difficulty": "basic",
+      "type": "matching",
+      "tags": [
+        "sysmon",
+        "event-ids",
+        "detection-engineering"
+      ],
+      "question": "A SaaS company is writing its first Sysmon-based detections. Match each Sysmon event ID to what it records.",
+      "options": {
+        "left": [
+          {
+            "id": "l1",
+            "text": "Event ID 1"
+          },
+          {
+            "id": "l2",
+            "text": "Event ID 3"
+          },
+          {
+            "id": "l3",
+            "text": "Event ID 11"
+          },
+          {
+            "id": "l4",
+            "text": "Event ID 13"
+          },
+          {
+            "id": "l5",
+            "text": "Event ID 22"
+          }
+        ],
+        "right": [
+          {
+            "id": "r1",
+            "text": "A file was created or overwritten"
+          },
+          {
+            "id": "r2",
+            "text": "A process made a DNS query"
+          },
+          {
+            "id": "r3",
+            "text": "A process was created, with command line, hashes and parent process"
+          },
+          {
+            "id": "r4",
+            "text": "A DLL (image) was loaded into a process"
+          },
+          {
+            "id": "r5",
+            "text": "A registry value was set"
+          },
+          {
+            "id": "r6",
+            "text": "A TCP/UDP connection was made, linked to the process that made it"
+          }
+        ]
+      },
+      "answer": {
+        "l1": "r3",
+        "l2": "r6",
+        "l3": "r1",
+        "l4": "r5",
+        "l5": "r2"
+      },
+      "explanation": {
+        "correct": "Sysmon writes to Microsoft-Windows-Sysmon/Operational with timestamps in UTC. Event ID 1 is process creation (CommandLine, Hashes, ParentImage, ProcessGuid). Event ID 3 is a network connection tied to the process by ProcessId and ProcessGuid; it is disabled by default and must be enabled in the configuration. Event ID 11 is FileCreate (created or overwritten), useful for autostart, temp and download folders. Event ID 13 is RegistryEvent (Value Set). Event ID 22 is DNSEvent, the query and the process that made it.",
+        "distractors": {
+          "l2": "Event ID 3 is the connection itself (IPs, ports, Initiated); the name a process looked up is in Event ID 22.",
+          "l4": "Value writes are Event ID 13; key and value creation or deletion is 12, and image (DLL) loads are 7."
+        }
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Sysmon (Sysinternals)",
+          "url": "https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0022",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "4625 failure patterns",
+      "layer": "L1",
+      "sector": "mssp-consulting",
+      "difficulty": "intermediate",
+      "type": "log-analysis",
+      "tags": [
+        "password-spray",
+        "failed-logon",
+        "triage"
+      ],
+      "attack": [
+        "T1110.003"
+      ],
+      "question": "An MSSP L1 analyst reviews these events from a client's member server. What is the most accurate reading?",
+      "context": "Security log, member server APP-HR02, 2026-10-12\n07:41:02-07:43:55 EventID=4625 x46 LogonType=3 IpAddress=198.51.100.45 WorkstationName=WS-HR-07\n  46 different TargetUserName values, 1 attempt each\n  Status=0xC000006D SubStatus=0xC000006A (39 events)\n  Status=0xC000006D SubStatus=0xC0000064 (7 events)\n07:44:10 EventID=4624 LogonType=3 TargetUserName=m.ionescu IpAddress=198.51.100.45 WorkstationName=WS-HR-07",
+      "options": [
+        {
+          "id": "a",
+          "text": "A brute-force attack against a single account, which is now locked out and needs a password reset"
+        },
+        {
+          "id": "b",
+          "text": "Stale saved credentials on WS-HR-07 retrying against the server; clearing the stored credentials there will stop it"
+        },
+        {
+          "id": "c",
+          "text": "A password spray from WS-HR-07: one try per account across many accounts, then a success for m.ionescu"
+        },
+        {
+          "id": "d",
+          "text": "Seven accounts are locked out (0xC0000064), so the lockout policy has already contained the activity"
+        }
+      ],
+      "answer": [
+        "c"
+      ],
+      "explanation": {
+        "correct": "46 different accounts, one attempt each, from one source in under three minutes is password spraying (T1110.003), which stays under lockout thresholds. SubStatus 0xC000006A means the user name exists but the password was wrong (39 real accounts); 0xC0000064 means the user name does not exist (7 guessed names). The success for m.ionescu seconds after the failures, from the same address, suggests a guessed password. Escalate: follow the Logon ID of that 4624, ask who uses WS-HR-07 (the spray runs on that internal host, so it may be compromised), and look for the same pattern on other servers and the domain controllers. Example Sentinel KQL: SecurityEvent | where EventID == 4625 | summarize Accounts = dcount(TargetUserName), Attempts = count() by IpAddress, bin(TimeGenerated, 10m) | where Accounts > 20.",
+        "distractors": {
+          "a": "Brute force means many attempts against one account; here each account was tried once. A lockout would show as 0xC0000234 (and 4740 on the domain controller).",
+          "b": "Stale credentials repeat for one account; they do not try 46 names, seven of which do not exist.",
+          "d": "0xC0000064 means the user name does not exist, not that an account is locked out (0xC0000234)."
+        },
+        "interview_angle": "Whether you read Sub Status codes and the account spread instead of just counting failures."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: 4625(F) An account failed to log on",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4625"
+        },
+        {
+          "title": "MITRE ATT&CK T1110.003 Password Spraying",
+          "url": "https://attack.mitre.org/techniques/T1110/003/"
+        }
+      ],
+      "source_type": "scenario-derived",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0023",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "lateral movement sequence on the target",
+      "layer": "L3",
+      "sector": "mssp-consulting",
+      "difficulty": "advanced",
+      "type": "log-analysis",
+      "tags": [
+        "lateral-movement",
+        "service-install",
+        "event-sequence"
+      ],
+      "attack": [
+        "T1021.002",
+        "T1569.002"
+      ],
+      "question": "What do these events on a client's file server show?",
+      "context": "Server SRV-FILE03, 2026-10-02, times in UTC\n13:20:41 Security 4624 LogonType=3 TargetUserName=adm-ops AuthenticationPackageName=NTLM IpAddress=198.51.100.23 TargetLogonId=0x8C41F2\n13:20:41 Security 4672 SubjectUserName=adm-ops SubjectLogonId=0x8C41F2 PrivilegeList=SeBackupPrivilege SeDebugPrivilege ...\n13:20:42 Security 5140 ShareName=\\\\*\\ADMIN$ SubjectUserName=adm-ops IpAddress=198.51.100.23\n13:20:43 System 7045 ServiceName=PSEXESVC ServiceFileName=%SystemRoot%\\PSEXESVC.exe ServiceAccount=LocalSystem\n13:20:43 Security 4688 NewProcessName=C:\\Windows\\PSEXESVC.exe CreatorProcessName=C:\\Windows\\System32\\services.exe\n13:20:45 Security 4688 NewProcessName=C:\\Windows\\System32\\cmd.exe CreatorProcessName=C:\\Windows\\PSEXESVC.exe",
+      "options": [
+        {
+          "id": "a",
+          "text": "A local administrator signed in at the server console and opened a command prompt through a support tool"
+        },
+        {
+          "id": "b",
+          "text": "PsExec-style remote execution from 198.51.100.23 as adm-ops: ADMIN$ access, a new service, and cmd.exe started by it"
+        },
+        {
+          "id": "c",
+          "text": "Malware already present on the server created a service to survive reboots; the network logon is unrelated background traffic"
+        },
+        {
+          "id": "d",
+          "text": "A pass-the-ticket attack, because an NTLM network logon proves that a forged Kerberos ticket was used"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "Read the events as one chain on the destination: a network logon (type 3) for adm-ops from 198.51.100.23; 4672 with the same Logon ID shows an administrative session; 5140 shows the ADMIN$ share opened (used to copy the service binary; needs Audit File Share); 7045 in the System log shows the PSEXESVC service installed (4697 in Security if Audit Security System Extension is on); services.exe starts it and it launches cmd.exe. That is remote service execution (T1569.002) over admin shares (T1021.002), the PsExec pattern; newer PsExec versions and clones can rename the service, so hunt on the pattern, not only the name. Next: on 198.51.100.23, find what started the connection (process creation, 4648), confirm whether adm-ops use was authorised (admins do use PsExec), and search other hosts for the same service install.",
+        "distractors": {
+          "a": "A console logon is type 2. Here the session is a network logon from another address, and the parent chain services.exe > PSEXESVC.exe > cmd.exe shows remote execution.",
+          "c": "The service appears two seconds after adm-ops' network session and the ADMIN$ access; it is part of the same remote action, not independent persistence.",
+          "d": "NTLM is an authentication package; pass-the-ticket abuses Kerberos tickets. An NTLM admin logon from a workstation can fit pass-the-hash, but these events alone do not prove it."
+        },
+        "interview_angle": "Whether you read events as a chain on the destination and know where to go next on the source."
+      },
+      "references": [
+        {
+          "title": "MITRE ATT&CK T1569.002 Service Execution",
+          "url": "https://attack.mitre.org/techniques/T1569/002/"
+        },
+        {
+          "title": "MITRE ATT&CK T1021.002 SMB/Windows Admin Shares",
+          "url": "https://attack.mitre.org/techniques/T1021/002/"
+        },
+        {
+          "title": "Microsoft Learn: 4624(S) An account was successfully logged on",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4624"
+        }
+      ],
+      "source_type": "scenario-derived",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0024",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "account creation to log clearing sequence",
+      "layer": "L3",
+      "sector": "finance",
+      "difficulty": "advanced",
+      "type": "log-analysis",
+      "tags": [
+        "account-creation",
+        "persistence",
+        "log-clearing"
+      ],
+      "attack": [
+        "T1136.001",
+        "T1098",
+        "T1685.005"
+      ],
+      "question": "These Security events were forwarded to the bank's SIEM from a payments server. No change ticket exists for that server that night. What do they show, and what is the right next step?",
+      "context": "SIEM copy of Security events from PAY-APP01 (times in UTC)\n01:47:12 4720 SubjectUserName=adm-t.radu SubjectLogonId=0x5A1F33 TargetUserName=svc_sqlbk TargetDomainName=PAY-APP01\n01:47:12 4722 SubjectUserName=adm-t.radu TargetUserName=svc_sqlbk\n01:47:40 4732 SubjectUserName=adm-t.radu MemberSid=S-1-5-21-...-1009 TargetUserName=Administrators TargetDomainName=Builtin TargetSid=S-1-5-32-544\n01:52:03 4624 LogonType=10 TargetUserName=svc_sqlbk IpAddress=198.51.100.77 TargetLogonId=0x61B0C9\n02:31:55 1102 SubjectUserName=svc_sqlbk SubjectLogonId=0x61B0C9",
+      "options": [
+        {
+          "id": "a",
+          "text": "Routine provisioning of a backup service account; 1102 is normal log maintenance after a change, so documenting it is enough"
+        },
+        {
+          "id": "b",
+          "text": "svc_sqlbk was added to Domain Admins, so the krbtgt password must be reset first because the whole domain is lost"
+        },
+        {
+          "id": "c",
+          "text": "The employee behind adm-t.radu is the attacker, so the case should go to HR and the employee be confronted now"
+        },
+        {
+          "id": "d",
+          "text": "A local backdoor admin used over RDP, then the log cleared; trace Logon ID 0x5A1F33 to see how adm-t.radu's session began"
+        }
+      ],
+      "answer": [
+        "d"
+      ],
+      "explanation": {
+        "correct": "adm-t.radu's session (Logon ID 0x5A1F33) created a local account on PAY-APP01 (4720), enabled it (4722) and added it to the built-in Administrators group, SID S-1-5-32-544 (4732). Five minutes later svc_sqlbk logged on over Remote Desktop (type 10) from 198.51.100.77, and that same session (0x61B0C9) cleared the Security log (1102). This is local persistence (T1136.001, T1098) followed by anti-forensics (T1685.005, numbered T1070.001 before ATT&CK v20); the events survive only because they were forwarded before the clear. Next: find the 4624 whose TargetLogonId is 0x5A1F33 to learn how adm-t.radu's session started (type, source), treat the adm-t.radu credentials as possibly stolen, identify 198.51.100.77, contain svc_sqlbk per playbook and escalate under the bank's incident process; because a payments system is involved, the incident must also be assessed against the DORA major-incident criteria.",
+        "distractors": {
+          "a": "No change ticket, an account created at 01:47 on a payments server, immediate RDP use and a log clear do not fit routine work; Microsoft notes 1102 should normally not be seen at all.",
+          "b": "4732 with Builtin\\Administrators is a local group on PAY-APP01. A Domain Admins addition would be 4728 on a domain controller, and nothing here touches the domain.",
+          "c": "The events show what the account did, not who used it; the credentials may be stolen. Confronting the employee before the evidence is secured risks a wrong accusation and tipping off a real attacker."
+        },
+        "interview_angle": "Whether you separate the account from the person and follow the Logon ID upstream."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: 4732(S) A member was added to a security-enabled local group",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4732"
+        },
+        {
+          "title": "Microsoft Learn: 1102(S) The audit log was cleared",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-1102"
+        },
+        {
+          "title": "MITRE ATT&CK T1136.001 Create Account: Local Account",
+          "url": "https://attack.mitre.org/techniques/T1136/001/"
+        }
+      ],
+      "source_type": "scenario-derived",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0025",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Sysmon file, registry and network chain",
+      "layer": "L2",
+      "sector": "tech-vendor",
+      "difficulty": "intermediate",
+      "type": "log-analysis",
+      "tags": [
+        "sysmon",
+        "persistence",
+        "run-key"
+      ],
+      "attack": [
+        "T1547.001",
+        "T1105"
+      ],
+      "question": "What does this Sysmon sequence from a developer's workstation show?",
+      "context": "Sysmon Operational, host DEV-WS-31, user CORP\\a.pop (UtcTime)\nDay 1 10:02:14 EID 11 Image=C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe TargetFilename=C:\\Users\\a.pop\\AppData\\Roaming\\updsvc.exe\nDay 1 10:02:15 EID 13 Image=C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe EventType=SetValue TargetObject=HKU\\S-1-5-21-...-1104\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\\UpdSvc Details=C:\\Users\\a.pop\\AppData\\Roaming\\updsvc.exe\nDay 2 07:58:40 EID 1 Image=C:\\Users\\a.pop\\AppData\\Roaming\\updsvc.exe ParentImage=C:\\Windows\\explorer.exe\nDay 2 07:58:44 EID 3 Image=C:\\Users\\a.pop\\AppData\\Roaming\\updsvc.exe Initiated=true DestinationIp=203.0.113.80 DestinationPort=443",
+      "options": [
+        {
+          "id": "a",
+          "text": "PowerShell dropped updsvc.exe and set a per-user Run key; it ran at the next logon and connected out on 443"
+        },
+        {
+          "id": "b",
+          "text": "A Windows component update: HKU entries are written by the operating system, and explorer.exe as parent means a system-started process"
+        },
+        {
+          "id": "c",
+          "text": "updsvc.exe was installed as a Windows service, started at boot and then checked a vendor server for updates"
+        },
+        {
+          "id": "d",
+          "text": "Proof of data exfiltration, because Event ID 3 records the content of the files updsvc.exe sent to 203.0.113.80"
+        }
+      ],
+      "answer": [
+        "a"
+      ],
+      "explanation": {
+        "correct": "Event 11: powershell.exe created an executable in the user's Roaming profile. Event 13: the same process set the value UpdSvc under the user's own Run key (HKU\\<SID>\\...\\CurrentVersion\\Run), which starts the program at each logon of that user (T1547.001). Event 1 the next morning: updsvc.exe started with explorer.exe as parent, which is how Run-key programs start at logon. Event 3: it then opened an outbound connection to 203.0.113.80:443, consistent with command and control. Next: hash and analyse updsvc.exe, find what made PowerShell fetch it (its own Event 1 parent and 4104 if enabled), check Event 22 for the domain name behind the IP, search other hosts for connections to 203.0.113.80, and isolate per playbook.",
+        "distractors": {
+          "b": "HKU\\<SID> is the user's own hive, writable by the user, and the writer was powershell.exe; explorer.exe is the user's shell, not a system service.",
+          "c": "Services are registered under HKLM\\SYSTEM\\CurrentControlSet\\Services and start under services.exe; this is a per-user Run key started by explorer.exe.",
+          "d": "Event 3 records connection metadata (process, addresses, ports, direction), never content or volume."
+        },
+        "interview_angle": "Whether you can link Sysmon events by process and path into one persistence story."
+      },
+      "references": [
+        {
+          "title": "MITRE ATT&CK T1547.001 Registry Run Keys / Startup Folder",
+          "url": "https://attack.mitre.org/techniques/T1547/001/"
+        },
+        {
+          "title": "Microsoft Learn: Sysmon (Sysinternals)",
+          "url": "https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon"
+        }
+      ],
+      "source_type": "scenario-derived",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0026",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "reading 4698 task content",
+      "layer": "L3",
+      "sector": "general",
+      "difficulty": "intermediate",
+      "type": "log-analysis",
+      "tags": [
+        "scheduled-task",
+        "persistence",
+        "event-4698"
+      ],
+      "attack": [
+        "T1053.005"
+      ],
+      "question": "What does this event establish?",
+      "context": "Security 4698, host WS-SALES-19\nSubject: AccountName=l.marin LogonID=0x2B7E40\nTask Name: \\WindowsHealthCheck\nTask Content (excerpt):\n<Triggers>\n  <LogonTrigger><Enabled>true</Enabled></LogonTrigger>\n  <TimeTrigger><Repetition><Interval>PT15M</Interval></Repetition><StartBoundary>2026-10-20T09:00:00</StartBoundary></TimeTrigger>\n</Triggers>\n<Principals><Principal id=\"Author\"><UserId>S-1-5-18</UserId><RunLevel>HighestAvailable</RunLevel></Principal></Principals>\n<Actions Context=\"Author\"><Exec><Command>C:\\ProgramData\\hc\\hc.exe</Command><Arguments>-s</Arguments></Exec></Actions>",
+      "options": [
+        {
+          "id": "a",
+          "text": "Windows created a built-in maintenance task, since tasks in the library root belong to the operating system"
+        },
+        {
+          "id": "b",
+          "text": "l.marin's session registered a root-level task running hc.exe as SYSTEM at logon and every 15 minutes"
+        },
+        {
+          "id": "c",
+          "text": "hc.exe has already run as SYSTEM every 15 minutes since 09:00, so this event is evidence of execution"
+        },
+        {
+          "id": "d",
+          "text": "SYSTEM created the task, because UserId S-1-5-18 identifies the account that registered it"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "4698 (Audit Other Object Access Events) records task creation. The Subject is who registered it: l.marin, Logon ID 0x2B7E40. The Task Content XML shows the triggers (every logon, and every 15 minutes via PT15M), the run-as identity (UserId S-1-5-18 = LocalSystem) and the action (hc.exe -s from ProgramData). Microsoft advises watching tasks created in the library root ('\\Name'), where manually created and malicious tasks often land; built-in tasks live under \\Microsoft\\Windows\\. Registering a task that runs as SYSTEM needs administrative rights, so also check how l.marin's session had them (4672 for that Logon ID). 4698 shows creation only: look for process-creation events for hc.exe to prove execution, and hash the file (T1053.005).",
+        "distractors": {
+          "a": "Built-in tasks sit under \\Microsoft\\Windows\\; a root-level task with a binary in ProgramData is the pattern Microsoft flags for review.",
+          "c": "4698 records that the task was created, not that it ran; execution needs its own evidence such as process creation events.",
+          "d": "The UserId in Principal is the identity the task runs as. The creator is the Subject of the event, l.marin."
+        },
+        "interview_angle": "Whether you separate a task's creator from its run-as account, and creation from execution."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: 4698(S) A scheduled task was created",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4698"
+        },
+        {
+          "title": "MITRE ATT&CK T1053.005 Scheduled Task",
+          "url": "https://attack.mitre.org/techniques/T1053/005/"
+        }
+      ],
+      "source_type": "scenario-derived",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0027",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "USB evidence in the Security log",
+      "layer": "L3",
+      "sector": "finance",
+      "difficulty": "advanced",
+      "type": "log-analysis",
+      "tags": [
+        "usb",
+        "removable-storage",
+        "exfiltration"
+      ],
+      "attack": [
+        "T1052.001"
+      ],
+      "question": "A bank's DLP team asks what these events prove about client files and the USB stick. Which statement is supported?",
+      "context": "SIEM extract, Security log of branch PC BR-PC-114; Audit PNP Activity and Audit Removable Storage enabled; times in UTC; file paths shown with the drive letter resolved by the collector\n12:02:31 6416 Subject=SYSTEM DeviceName=\"Generic Flash Disk USB Device\" ClassName=DiskDrive DeviceId=USBSTOR\\Disk&Ven_Generic&Prod_Flash_Disk&Rev_8.07\\0123456789ABCDEF&0\n12:05:10 4663 Subject=c.dobre ObjectName=E:\\export\\clienti_credit_2025.xlsx Accesses=WriteData (or AddFile) ProcessName=C:\\Windows\\explorer.exe\n12:05:12 4663 Subject=c.dobre ObjectName=E:\\export\\garantii_Q4.pdf Accesses=WriteData (or AddFile) ProcessName=C:\\Windows\\explorer.exe\n12:09:48 4663 Subject=c.dobre ObjectName=E:\\export\\clienti_credit_2025.xlsx Accesses=ReadData (or ListDirectory) ProcessName=C:\\Program Files\\Microsoft Office\\root\\Office16\\EXCEL.EXE",
+      "options": [
+        {
+          "id": "a",
+          "text": "The files were copied from the bank's file server, because each 4663 records both the source and the destination of the copy"
+        },
+        {
+          "id": "b",
+          "text": "The stick left the branch with the files on it, because 6416 is also written when a device is removed"
+        },
+        {
+          "id": "c",
+          "text": "c.dobre's session wrote two files to the stick via Explorer about 3 minutes after it was recognised, then opened one in Excel"
+        },
+        {
+          "id": "d",
+          "text": "Nothing was written, because 4663 with WriteData only shows that the user had permission to write to the file"
+        }
+      ],
+      "answer": [
+        "c"
+      ],
+      "explanation": {
+        "correct": "6416 (Audit PNP Activity) shows a USB disk recognised at 12:02:31; its Device ID (vendor, product, instance) lets you match the physical stick and other artefacts. 4663 with Audit Removable Storage records access rights actually used on files on removable storage. WriteData by explorer.exe in c.dobre's session on two files shows they were written to the stick (copy-paste or drag-and-drop through Explorer), and the later ReadData by EXCEL.EXE shows one was opened from it. Not proven by these events: where the files came from (the source read needs a SACL on the source or endpoint telemetry), their exact content (hashes), what happened to the stick afterwards, and who physically operated the session. State it at that level to the DLP team, then preserve evidence and assess whether client personal data was involved (T1052.001).",
+        "distractors": {
+          "a": "Each 4663 describes one object on one host. It does not link a source and a destination; the source side needs its own auditing or endpoint data.",
+          "b": "6416 records that a new external device was recognised; no Windows event can show a stick leaving the building.",
+          "d": "A handle request is 4656; Microsoft documents that 4663 shows the access right was used, not just requested."
+        },
+        "interview_angle": "Whether you state exactly what each event proves, because HR, Legal and the regulator will test it."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Monitor the use of removable storage devices",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2012-r2-and-2012/jj574128(v=ws.11)"
+        },
+        {
+          "title": "Microsoft Learn: 4663(S) An attempt was made to access an object",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-4663"
+        },
+        {
+          "title": "Microsoft Learn: 6416(S) A new external device was recognized by the System",
+          "url": "https://learn.microsoft.com/en-us/previous-versions/windows/it-pro/windows-10/security/threat-protection/auditing/event-6416"
+        }
+      ],
+      "source_type": "scenario-derived",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0028",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Prefetch: user attribution",
+      "layer": "L2",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "single",
+      "tags": [
+        "prefetch",
+        "attribution",
+        "execution-evidence"
+      ],
+      "attack": [
+        "T1219"
+      ],
+      "question": "On a bank branch workstation shared by four tellers, you find a Prefetch file showing that an unapproved remote-access tool last ran at 14:32 yesterday. The branch manager wants to know which teller ran it before HR is involved. What is the correct next step?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Read the user SID stored in the Prefetch file header, which identifies the account that launched it"
+        },
+        {
+          "id": "b",
+          "text": "Name the teller rostered on that workstation at 14:32, since the shift schedule shows who used it"
+        },
+        {
+          "id": "c",
+          "text": "Correlate the run time with logon sessions and process-creation events, as Prefetch stores no user"
+        },
+        {
+          "id": "d",
+          "text": "Check the NTFS owner of the .pf file, because Windows sets it to the account that started the program"
+        }
+      ],
+      "answer": [
+        "c"
+      ],
+      "explanation": {
+        "correct": "Prefetch (C:\\Windows\\Prefetch\\NAME-HASH.pf) proves that an executable ran on the machine and gives its run count and last run times (up to eight on Windows 8 and later), but it is system-wide: the format has no user or SID field. To attribute the run, line the timestamps up with who was logged on (Security 4624 and 4634 with the Logon ID), with process creation 4688 if that auditing is enabled (it names the subject account), with EDR process telemetry, and with per-user artefacts in each teller's NTUSER.DAT such as UserAssist. In Microsoft Defender XDR, for example: DeviceProcessEvents | where DeviceName == '<host>' and FileName =~ '<tool>.exe' | project Timestamp, AccountName, ProcessCommandLine.",
+        "distractors": {
+          "a": "The Prefetch format holds the executable name, run count, run times, volume details and referenced files; there is no user or SID to read.",
+          "b": "A roster shows who should have been there, not who launched the program; acting on it before checking logon evidence risks blaming the wrong person in an HR case.",
+          "d": "The .pf file is written by the operating system's prefetcher, not by the user's process, so its owner says nothing about who ran the program."
+        },
+        "interview_angle": "Whether you know the limits of each artefact and avoid attributing an action to a person from system-wide evidence."
+      },
+      "references": [
+        {
+          "title": "Belkasoft: Windows Prefetch forensics",
+          "url": "https://belkasoft.com/windows-prefetch-forensics"
+        },
+        {
+          "title": "Forensics Wiki: Prefetch",
+          "url": "https://forensics.wiki/prefetch/"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0029",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Prefetch: missing on servers",
+      "layer": "L3",
+      "sector": "mssp-consulting",
+      "difficulty": "intermediate",
+      "type": "single",
+      "tags": [
+        "prefetch",
+        "anti-forensics",
+        "triage"
+      ],
+      "attack": [
+        "T1070.004"
+      ],
+      "question": "Triaging a client's Windows Server file server, a junior analyst finds C:\\Windows\\Prefetch empty and drafts the finding 'attacker wiped Prefetch to hide execution'. What should be checked before that finding goes into the client report?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Whether carving unallocated space finds any .pf files; if none are found, a secure-delete tool was used"
+        },
+        {
+          "id": "b",
+          "text": "The EnablePrefetcher setting and the USN journal, because application prefetching is often off on servers"
+        },
+        {
+          "id": "c",
+          "text": "Whether running a known tool on the live server now creates a new .pf file in the Prefetch folder"
+        },
+        {
+          "id": "d",
+          "text": "Nothing further, because an empty Prefetch folder is a reliable anti-forensics indicator on any Windows host"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "Before calling something anti-forensics, rule out normal configuration. Prefetching is controlled by the EnablePrefetcher value under HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management\\PrefetchParameters (0 disabled, 1 application launch, 2 boot, 3 both), and application prefetching is commonly disabled by default on Windows Server, so an empty folder there can be completely normal. If prefetching is enabled, look for proof of deletion instead of assuming it, such as $UsnJrnl records with a FileDelete reason for *.pf names. Either way, pivot to other execution sources: Amcache, ShimCache, Security 4688 and EDR telemetry.",
+        "distractors": {
+          "a": "Finding no carved .pf files is absence of evidence; it fits prefetching never having been enabled just as well as a secure wipe.",
+          "c": "Running tools on the live evidence host changes it, and the result only shows today's setting, not what was true during the intrusion; reading the registry value answers this without side effects.",
+          "d": "An empty folder is only suspicious where prefetching was enabled; on many servers it is the default state."
+        },
+        "interview_angle": "Checking that an artefact should exist before treating its absence as evidence of tampering."
+      },
+      "references": [
+        {
+          "title": "Belkasoft: Windows Prefetch forensics",
+          "url": "https://belkasoft.com/windows-prefetch-forensics"
+        },
+        {
+          "title": "Forensics Wiki: Prefetch",
+          "url": "https://forensics.wiki/prefetch/"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0030",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "ShimCache: live systems and memory",
+      "layer": "L3",
+      "sector": "tech-vendor",
+      "difficulty": "advanced",
+      "type": "single",
+      "tags": [
+        "shimcache",
+        "memory-forensics",
+        "live-response"
+      ],
+      "question": "An incident response team triages a live host that has not rebooted since an intrusion two days ago. Prefetch shows the attacker's tool ran, yet the AppCompatCache (ShimCache) value in the live SYSTEM hive has no entry for it. What is the most likely explanation?",
+      "options": [
+        {
+          "id": "a",
+          "text": "ShimCache records only programs started through Explorer, so a tool launched from a command shell never appears"
+        },
+        {
+          "id": "b",
+          "text": "ShimCache records only binaries with a valid digital signature, so an unsigned attacker tool is skipped"
+        },
+        {
+          "id": "c",
+          "text": "The attacker must have edited the AppCompatCache value, which should be reported to the client as anti-forensics"
+        },
+        {
+          "id": "d",
+          "text": "New ShimCache entries are kept in memory and written to the registry at shutdown, so they are still only in RAM"
+        }
+      ],
+      "answer": [
+        "d"
+      ],
+      "explanation": {
+        "correct": "Windows keeps the Application Compatibility Cache in kernel memory and writes it to the AppCompatCache value under HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\AppCompatCache when the system shuts down or restarts. On a host that has not rebooted since the intrusion, the attacker's entries can exist only in RAM. Capture memory and parse it (Volatility 3 has a windows.shimcachemem plugin that reads the cache from ahcache.sys structures). When you read the entries, remember that each timestamp is the file's last-modified time, not an execution time.",
+        "distractors": {
+          "a": "That limitation describes UserAssist, which tracks Explorer launches; ShimCache is filled by the application compatibility engine however the program is started.",
+          "b": "Signing status does not decide whether a file is cached; signed and unsigned executables both appear.",
+          "c": "Tampering is possible, but it is not the first explanation when the cache simply has not been flushed yet; claim anti-forensics only with evidence."
+        },
+        "interview_angle": "Knowing when an artefact is written to disk, and that live triage can miss what is still in memory."
+      },
+      "references": [
+        {
+          "title": "Magnet Forensics: ShimCache vs AmCache",
+          "url": "https://www.magnetforensics.com/blog/shimcache-vs-amcache-key-windows-forensic-artifacts/"
+        },
+        {
+          "title": "Volatility 3 docs: windows.shimcachemem",
+          "url": "https://volatility3.readthedocs.io/en/latest/volatility3.plugins.windows.shimcachemem.html"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0031",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Amcache: presence versus execution",
+      "layer": "L3",
+      "sector": "general",
+      "difficulty": "intermediate",
+      "type": "truefalse",
+      "tags": [
+        "amcache",
+        "execution-evidence"
+      ],
+      "question": "True or false: on Windows 10 or 11, an InventoryApplicationFile entry in Amcache.hve for C:\\Users\\Public\\svcupd.exe is enough on its own to state in a report that svcupd.exe was executed.",
+      "options": [
+        {
+          "id": "a",
+          "text": "True"
+        },
+        {
+          "id": "b",
+          "text": "False"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "False. Amcache.hve (C:\\Windows\\AppCompat\\Programs\\Amcache.hve) is filled by the compatibility inventory, which also records executables found when directories are scanned or files copied by installers. An entry proves the file was present at that path and gives useful metadata (SHA-1 of roughly the first 31 MB, size, publisher, compile time), not that it ran. Report it as presence, and corroborate execution with Prefetch, Security 4688, EDR process events or other execution artefacts before writing 'executed'. The SHA-1 stays valuable: it survives deletion of the file and can be searched in threat intelligence.",
+        "distractors": {
+          "a": "Treating Amcache as an execution log is a common overstatement; on modern Windows it also lists files that were inventoried but never launched."
+        },
+        "interview_angle": "Whether you separate 'the file existed' from 'the file ran' when writing findings."
+      },
+      "references": [
+        {
+          "title": "Securelist: AmCache artifact for forensic analysis",
+          "url": "https://securelist.com/amcache-forensic-artifact/117622/"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0032",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Execution artefacts compared",
+      "layer": "L2",
+      "sector": "general",
+      "difficulty": "basic",
+      "type": "matching",
+      "tags": [
+        "prefetch",
+        "shimcache",
+        "amcache",
+        "userassist"
+      ],
+      "question": "Match each Windows artefact to what it records.",
+      "options": {
+        "left": [
+          {
+            "id": "l1",
+            "text": "Prefetch (.pf file)"
+          },
+          {
+            "id": "l2",
+            "text": "UserAssist"
+          },
+          {
+            "id": "l3",
+            "text": "ShimCache (AppCompatCache)"
+          },
+          {
+            "id": "l4",
+            "text": "Amcache.hve"
+          }
+        ],
+        "right": [
+          {
+            "id": "r1",
+            "text": "Per-user launch count and last-run time, with program names ROT13-encoded"
+          },
+          {
+            "id": "r2",
+            "text": "SHA-1 hash, path and publisher details of executables the system inventoried"
+          },
+          {
+            "id": "r3",
+            "text": "Folders the user browsed in File Explorer"
+          },
+          {
+            "id": "r4",
+            "text": "Run count and up to eight last-run times, plus files touched in the first seconds"
+          },
+          {
+            "id": "r5",
+            "text": "File path and the file's own last-modified time, stored in the SYSTEM hive"
+          }
+        ]
+      },
+      "answer": {
+        "l1": "r4",
+        "l2": "r1",
+        "l3": "r5",
+        "l4": "r2"
+      },
+      "explanation": {
+        "correct": "Prefetch (C:\\Windows\\Prefetch) keeps the run count, up to eight last-run times on Windows 8 and later, and the files and folders the program referenced in roughly its first ten seconds. UserAssist (NTUSER.DAT ...\\Explorer\\UserAssist\\{GUID}\\Count) is per user and stores ROT13-encoded names with a run count and last-run time. ShimCache (SYSTEM ...\\Session Manager\\AppCompatCache) lists paths with the file's $STANDARD_INFORMATION last-modified time, which is not an execution time. Amcache.hve stores inventory data including the SHA-1 hash, path and publisher. The unused description, folders browsed in Explorer, belongs to ShellBags.",
+        "distractors": {
+          "l3": "The ShimCache timestamp is easily misread as a run time; it is the file's last-modified time, so do not pair ShimCache with 'last-run times'.",
+          "l4": "Amcache is not a launch counter; its strength is the SHA-1 hash and file metadata."
+        }
+      },
+      "references": [
+        {
+          "title": "Mandiant: Caching Out, the value of Shimcache for investigators",
+          "url": "https://cloud.google.com/blog/topics/threat-intelligence/caching-out-the-val/"
+        },
+        {
+          "title": "Securelist: AmCache artifact for forensic analysis",
+          "url": "https://securelist.com/amcache-forensic-artifact/117622/"
+        },
+        {
+          "title": "Velociraptor: Windows.Registry.UserAssist",
+          "url": "https://docs.velociraptor.app/artifact_references/pages/windows.registry.userassist/"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0033",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "UserAssist: scope and limits",
+      "layer": "L2",
+      "sector": "general",
+      "difficulty": "intermediate",
+      "type": "single",
+      "tags": [
+        "userassist",
+        "attribution",
+        "execution-evidence"
+      ],
+      "attack": [
+        "T1003.001"
+      ],
+      "question": "Prefetch shows a memory-dumping utility ran on a workstation at 10:14, while only one user, k.stan, was logged on. k.stan's UserAssist key has no entry for the utility, and a colleague says this clears k.stan. How should you assess that claim?",
+      "options": [
+        {
+          "id": "a",
+          "text": "It does not clear k.stan: UserAssist tracks Explorer launches, and a tool run from a shell has no entry"
+        },
+        {
+          "id": "b",
+          "text": "It clears k.stan: UserAssist logs every process an account starts, so another account must have run it"
+        },
+        {
+          "id": "c",
+          "text": "It clears k.stan: UserAssist is machine-wide, so a missing entry means nobody ran the tool interactively"
+        },
+        {
+          "id": "d",
+          "text": "It proves k.stan deleted the UserAssist entry, because Windows writes one for every single program launch"
+        }
+      ],
+      "answer": [
+        "a"
+      ],
+      "explanation": {
+        "correct": "UserAssist (NTUSER.DAT\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserAssist\\{GUID}\\Count) records programs a user launches through the Explorer shell: Start menu, desktop shortcuts, double-click in File Explorer. Programs started from cmd.exe, PowerShell, a script or a remote session do not appear. Its absence therefore neither clears nor implicates k.stan. Attribute the run with the logon session (4624 and its Logon ID), process creation 4688 or EDR telemetry, which record the account and the parent process, for example cmd.exe or powershell.exe.",
+        "distractors": {
+          "b": "UserAssist is not a full process log; command-line launches never reach it.",
+          "c": "UserAssist lives in each user's NTUSER.DAT, so it is per user, not machine-wide.",
+          "d": "Windows does not write UserAssist entries for shell-launched tools, so a missing entry is expected and is not evidence of deletion."
+        },
+        "interview_angle": "Testing whether you treat the absence of an artefact as proof without knowing what populates it."
+      },
+      "references": [
+        {
+          "title": "Velociraptor: Windows.Registry.UserAssist",
+          "url": "https://docs.velociraptor.app/artifact_references/pages/windows.registry.userassist/"
+        },
+        {
+          "title": "Securelist: UserAssist artifact forensic value",
+          "url": "https://securelist.com/userassist-artifact-forensic-value-for-incident-response/116911/"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0034",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "ShellBags: folder access",
+      "layer": "L3",
+      "sector": "finance",
+      "difficulty": "advanced",
+      "type": "single",
+      "tags": [
+        "shellbags",
+        "insider-threat",
+        "attribution"
+      ],
+      "question": "In an internal fraud case at a bank, a trader denies ever opening the restricted share folder \\\\fs01\\Treasury\\Limits, which was deleted last month. The trader's UsrClass.dat holds a ShellBags entry for that folder. What does this finding support?",
+      "options": [
+        {
+          "id": "a",
+          "text": "That the trader opened every file that was stored in the folder at the time"
+        },
+        {
+          "id": "b",
+          "text": "Nothing about the trader, because ShellBags are system-wide and shared by all accounts"
+        },
+        {
+          "id": "c",
+          "text": "That the trader's account browsed to the folder, but not which of its files were opened or copied"
+        },
+        {
+          "id": "d",
+          "text": "Nothing, because the entry of a deleted folder is purged, so this one must come from another user"
+        }
+      ],
+      "answer": [
+        "c"
+      ],
+      "explanation": {
+        "correct": "ShellBags (BagMRU and Bags keys, mainly in UsrClass.dat and also in NTUSER.DAT) store per-user view settings for folders opened in File Explorer, including network shares, removable drives and archives, and they remain after the folder is deleted. An entry in the trader's hive therefore supports that this account navigated to \\\\fs01\\Treasury\\Limits. It does not show which files were opened or copied: for that, look at LNK files and Jump Lists in the trader's profile, OpenSavePidlMRU, and the file server's object-access auditing (4663) if it was enabled. Interpret ShellBag timestamps with care, because key last-write times and the folder times embedded in the entry mean different things.",
+        "distractors": {
+          "a": "ShellBags record folders, not files; viewing a folder does not mean its files were opened.",
+          "b": "ShellBags sit in each user's own hives, which is exactly why they help attribution.",
+          "d": "ShellBags persist after a folder is deleted; that persistence is what makes them useful for folders that no longer exist."
+        },
+        "interview_angle": "Separating 'viewed a folder' from 'accessed or took files', which matters when evidence may reach HR or a court."
+      },
+      "references": [
+        {
+          "title": "Binalyze KB: ShellBags",
+          "url": "https://kb.binalyze.com/air/features/acquisition/supported-evidence/windows-collections-detail/shellbags"
+        },
+        {
+          "title": "Velociraptor: Windows.Forensics.Shellbags",
+          "url": "https://docs.velociraptor.app/artifact_references/pages/windows.forensics.shellbags/"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0035",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "USB device artefacts",
+      "layer": "L3",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "matching",
+      "tags": [
+        "usb",
+        "registry",
+        "insider-threat"
+      ],
+      "attack": [
+        "T1052.001"
+      ],
+      "question": "In a bank's investigation of suspected data theft on a USB stick, match each artefact to the question it answers.",
+      "options": {
+        "left": [
+          {
+            "id": "l1",
+            "text": "SYSTEM\\CurrentControlSet\\Enum\\USBSTOR subkey"
+          },
+          {
+            "id": "l2",
+            "text": "SYSTEM\\MountedDevices"
+          },
+          {
+            "id": "l3",
+            "text": "MountPoints2 in the user's NTUSER.DAT"
+          },
+          {
+            "id": "l4",
+            "text": "C:\\Windows\\INF\\setupapi.dev.log"
+          }
+        ],
+        "right": [
+          {
+            "id": "r1",
+            "text": "Which drive letter or volume GUID the device was given"
+          },
+          {
+            "id": "r2",
+            "text": "Which files were copied onto the device"
+          },
+          {
+            "id": "r3",
+            "text": "Which vendor, product and instance ID (serial, if reported) the device has"
+          },
+          {
+            "id": "r4",
+            "text": "When the device was first installed on this computer"
+          },
+          {
+            "id": "r5",
+            "text": "Which user account had the device's volume mounted"
+          }
+        ]
+      },
+      "answer": {
+        "l1": "r3",
+        "l2": "r1",
+        "l3": "r5",
+        "l4": "r4"
+      },
+      "explanation": {
+        "correct": "USBSTOR (HKLM\\SYSTEM\\CurrentControlSet\\Enum\\USBSTOR) identifies the storage device by vendor, product, revision and instance ID. MountedDevices maps drive letters (\\DosDevices\\E:) and volume GUIDs to that device. MountPoints2, in each user's NTUSER.DAT, lists the volume GUIDs that account had mounted, which is how you tie the device to a user. setupapi.dev.log records the driver installation the first time the device was connected; its times are local time, unlike the UTC times in the registry. None of these records which files were copied: that needs endpoint DLP or EDR telemetry, or analysis of the device itself.",
+        "distractors": {
+          "l2": "MountedDevices is system-wide; it shows the drive letter but not which user used the device, which is MountPoints2's role.",
+          "l1": "USBSTOR identifies the device; it does not list files written to it, so no registry key answers 'which files were copied'."
+        },
+        "interview_angle": "Building a USB timeline from several artefacts, each answering one question."
+      },
+      "references": [
+        {
+          "title": "Magnet Forensics: Artifact profile, USB devices",
+          "url": "https://www.magnetforensics.com/blog/artifact-profile-usb-devices/"
+        },
+        {
+          "title": "MITRE ATT&CK T1052.001 Exfiltration over USB",
+          "url": "https://attack.mitre.org/techniques/T1052/001/"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0036",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Recycle Bin $I and $R files",
+      "layer": "L2",
+      "sector": "general",
+      "difficulty": "basic",
+      "type": "single",
+      "tags": [
+        "recycle-bin",
+        "deleted-files"
+      ],
+      "question": "A user says a colleague deleted her report from a shared PC. In C:\\$Recycle.Bin\\S-1-5-21-1844237615-456123789-3012345678-1107\\ you find $I8K2QWE.docx and $R8K2QWE.docx. What do these files tell you?",
+      "options": [
+        {
+          "id": "a",
+          "text": "$I8K2QWE.docx is the recoverable document itself, while $R8K2QWE.docx records its original path and deletion time"
+        },
+        {
+          "id": "b",
+          "text": "$R holds the content, $I the original path, size and deletion time; the SID folder shows which account deleted it"
+        },
+        {
+          "id": "c",
+          "text": "The report was permanently deleted from the volume, so its content can now only be recovered by carving unallocated space"
+        },
+        {
+          "id": "d",
+          "text": "Nothing about who deleted it, because all accounts on the PC write their deleted files into one shared Recycle Bin folder"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "Since Windows Vista, each deleted item goes to C:\\$Recycle.Bin\\<SID>\\ as a pair with the same random suffix: the $R file is the content (renamed, otherwise intact) and the $I file is the metadata: original full path, file size and deletion time. The folder is named after the SID of the account that deleted the file; resolve it (for example through the ProfileList key in the SOFTWARE hive or the domain) to an account name. That shows which account deleted the file, not which person was at the keyboard, so pair it with logon evidence. Files removed with Shift+Delete or from a command line skip the Recycle Bin entirely.",
+        "distractors": {
+          "a": "The roles are reversed: $R is the content and $I is the metadata.",
+          "c": "The $R file still holds the full content, so the report is recoverable straight from the Recycle Bin folder.",
+          "d": "Each account gets its own subfolder named after its SID, which is what allows attribution."
+        }
+      },
+      "references": [
+        {
+          "title": "Velociraptor: Windows.Forensics.RecycleBin",
+          "url": "https://docs.velociraptor.app/artifact_references/pages/windows.forensics.recyclebin/"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0037",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Volume shadow copies: earlier registry state",
+      "layer": "L3",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "single",
+      "tags": [
+        "volume-shadow-copy",
+        "registry",
+        "anti-forensics"
+      ],
+      "attack": [
+        "T1070"
+      ],
+      "question": "In a bank insider case, the employee ran a registry-cleaning utility the day before the laptop was seized, and USBSTOR in the imaged SYSTEM hive now lists no storage devices. Which source can give you the pre-cleaning registry hives themselves?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Volume shadow copies in the image that predate the cleaning, exposed read-only and parsed"
+        },
+        {
+          "id": "b",
+          "text": "The $UsnJrnl, which keeps a copy of the registry keys and values the cleaner removed from the hive"
+        },
+        {
+          "id": "c",
+          "text": "The cleaning utility's own undo feature, run on the seized laptop to restore the removed entries"
+        },
+        {
+          "id": "d",
+          "text": "The pagefile, which holds a complete copy of every registry hive each time Windows writes the hive"
+        }
+      ],
+      "answer": [
+        "a"
+      ],
+      "explanation": {
+        "correct": "Volume Shadow Copy snapshots (restore points, backups, update checkpoints) are block-level copy-on-write images of the volume, so a snapshot older than the cleaning contains the SYSTEM and NTUSER.DAT hives as they were then. List the snapshots in the image, expose them read-only on a forensic workstation (for example with libvshadow's vshadowmount) and parse USBSTOR, MountedDevices and MountPoints2 from each. Snapshots exist only if System Protection or backups created them, and attackers often delete them (vssadmin delete shadows, ATT&CK T1490), so also check sources the cleaner may have missed, such as setupapi.dev.log.",
+        "distractors": {
+          "b": "The USN journal records that files changed and why, not registry content; Microsoft notes it cannot be used to reverse a change.",
+          "c": "Running tools on the original evidence alters it and undermines the integrity of the case; work only on the verified image.",
+          "d": "pagefile.sys holds paged-out memory fragments; pieces of the registry may turn up there, but not a complete hive from a known point in time."
+        },
+        "interview_angle": "Knowing where historical state survives anti-forensics, and preserving integrity while you recover it."
+      },
+      "references": [
+        {
+          "title": "Forensics Wiki: Windows shadow volumes",
+          "url": "https://forensics.wiki/windows_shadow_volumes/"
+        },
+        {
+          "title": "Microsoft Learn: Volume Shadow Copy Service",
+          "url": "https://learn.microsoft.com/en-us/windows-server/storage/file-server/volume-shadow-copy-service"
+        },
+        {
+          "title": "MITRE ATT&CK T1070 Indicator Removal",
+          "url": "https://attack.mitre.org/techniques/T1070/"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0038",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Cloud upload: identifying the uploaded file",
+      "layer": "L3",
+      "sector": "finance",
+      "difficulty": "advanced",
+      "type": "single",
+      "tags": [
+        "exfiltration",
+        "cloud-upload",
+        "registry-mru",
+        "browser-history"
+      ],
+      "attack": [
+        "T1567.002"
+      ],
+      "question": "Proxy logs at a bank show a 48 MB HTTPS upload from a dealer's workstation to a personal cloud-storage site at 18:22, and the browser history confirms a visit to the site's upload page. Which host artefact is most likely to name the file the dealer selected for upload?",
+      "options": [
+        {
+          "id": "a",
+          "text": "The downloads table in the browser's History database, which logs files transferred in both directions"
+        },
+        {
+          "id": "b",
+          "text": "OpenSavePidlMRU in the dealer's NTUSER.DAT, which records files picked in the Open/Save dialog"
+        },
+        {
+          "id": "c",
+          "text": "The Prefetch file for the browser executable, whose referenced-files list includes uploaded files"
+        },
+        {
+          "id": "d",
+          "text": "The UserAssist entry for the browser, whose focus time and count show which file was handled"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "When a website asks for a file, the browser shows the Windows common Open dialog, and the shell records the selection under NTUSER.DAT\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\OpenSavePidlMRU (a subkey per extension plus '*' for all), while LastVisitedPidlMRU ties the browser executable to the folder it used. Line the MRU entry and the key's last-write time up with the 18:22 proxy record. Limits: a drag-and-drop upload bypasses the dialog, the MRU proves selection rather than a completed transfer, and without TLS inspection the proxy sees only the destination and byte counts, so confirm with cloud-provider or CASB logs where available.",
+        "distractors": {
+          "a": "The browser's downloads table records downloads only; uploads are not logged there.",
+          "c": "Prefetch lists files referenced in roughly the first ten seconds after the browser starts, not files chosen later in a session.",
+          "d": "UserAssist counts program launches and focus time; it holds no names of files a program handled."
+        },
+        "interview_angle": "Reconstructing a cloud upload from host artefacts, and stating what each one cannot prove."
+      },
+      "references": [
+        {
+          "title": "Binalyze KB: OpenSavePidlMRU",
+          "url": "https://kb.binalyze.com/air/features/acquisition/supported-evidence/windows-collections-detail/opensavepidlmru"
+        },
+        {
+          "title": "MITRE ATT&CK T1567.002 Exfiltration to Cloud Storage",
+          "url": "https://attack.mitre.org/techniques/T1567/002/"
+        },
+        {
+          "title": "Microsoft Learn: Common Item Dialog",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/shell/common-file-dialog"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0039",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "LNK files: which timestamp means what",
+      "layer": "L3",
+      "sector": "mssp-consulting",
+      "difficulty": "advanced",
+      "type": "single",
+      "tags": [
+        "lnk",
+        "timeline",
+        "file-access"
+      ],
+      "question": "You parse budget_2027.xlsx.lnk from a client user's Recent folder. The LNK file's own NTFS times are created 2026-09-01 09:10 and modified 2026-09-29 16:45. The target times embedded in the LNK are created 2025-11-03 08:00 and modified 2026-09-28 18:02. Which statement is best supported?",
+      "options": [
+        {
+          "id": "a",
+          "text": "The user first opened the spreadsheet on 2025-11-03, the creation time recorded for the target"
+        },
+        {
+          "id": "b",
+          "text": "The user edited the spreadsheet on 2026-09-28 at 18:02, because the LNK records the user's own edits"
+        },
+        {
+          "id": "c",
+          "text": "The spreadsheet was deleted on 2026-09-29 at 16:45, which is when the LNK file was last modified"
+        },
+        {
+          "id": "d",
+          "text": "The user first opened the file through the shell around 2026-09-01 and last around 2026-09-29 16:45"
+        }
+      ],
+      "answer": [
+        "d"
+      ],
+      "explanation": {
+        "correct": "A Recent-folder LNK is created the first time the user opens a file of that name through the shell and updated on later opens, so its own creation and modification times approximate the first and last open. The target times in the LNK header (CreationTime, AccessTime and WriteTime in the MS-SHLLINK format) are a snapshot of the target file's own timestamps when the link was last updated: they describe the file, not the user. The LNK also stores the target's path, size, volume serial number and drive type, and it survives deletion of the target.",
+        "distractors": {
+          "a": "The embedded creation time belongs to the file itself, wherever it was created; it is not the user's first open.",
+          "b": "The embedded modified time is the file's last write before the latest open; it does not say who wrote it.",
+          "c": "An update to the LNK reflects another open of the file; deleting the target does not touch the LNK."
+        },
+        "interview_angle": "Reading artefact timestamps for what they actually measure instead of the first plausible meaning."
+      },
+      "references": [
+        {
+          "title": "Microsoft MS-SHLLINK: ShellLinkHeader",
+          "url": "https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-shllink/c3376b21-0931-45e4-b2fc-a48ac0e60d15"
+        },
+        {
+          "title": "Forensics Wiki: LNK",
+          "url": "https://forensics.wiki/lnk/"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0040",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "$MFT: resident data in deleted records",
+      "layer": "L3",
+      "sector": "tech-vendor",
+      "difficulty": "intermediate",
+      "type": "single",
+      "tags": [
+        "mft",
+        "deleted-files",
+        "ntfs"
+      ],
+      "attack": [
+        "T1070.004"
+      ],
+      "question": "An attacker's 350-byte batch script was deleted from an NTFS volume, and carving unallocated clusters did not find it. Where else might its full content survive?",
+      "options": [
+        {
+          "id": "a",
+          "text": "In the $UsnJrnl, which stores the data written to each file alongside its change record"
+        },
+        {
+          "id": "b",
+          "text": "In the $Recycle.Bin $R file, since every deletion on NTFS passes through the Recycle Bin"
+        },
+        {
+          "id": "c",
+          "text": "In its old $MFT record, because small files are stored resident inside the record itself"
+        },
+        {
+          "id": "d",
+          "text": "In the Prefetch folder, which keeps a cached copy of every script the system has run"
+        }
+      ],
+      "answer": [
+        "c"
+      ],
+      "explanation": {
+        "correct": "Each NTFS file has a record (usually 1,024 bytes) in the $MFT. When the content is small enough, typically up to several hundred bytes, it is stored resident in the record's $DATA attribute instead of in separate clusters, so carving unallocated clusters will never find it. Deleting the file only marks the record as free; until NTFS reuses that record, its name ($FILE_NAME), timestamps and resident content can be recovered by parsing the $MFT, including the unallocated entries.",
+        "distractors": {
+          "a": "The change journal records the file name, reason flags and time of each change, not the data; Microsoft notes it cannot be used to reverse a change.",
+          "b": "Command-line deletion, Shift+Delete and script-driven deletion bypass the Recycle Bin.",
+          "d": "Prefetch files hold execution metadata and referenced paths, not copies of scripts; at most the script's path may appear among the files referenced by CMD.EXE's Prefetch entry."
+        },
+        "interview_angle": "Understanding NTFS internals well enough to know where deleted content can still sit."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Master File Table",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/fileio/master-file-table"
+        },
+        {
+          "title": "Microsoft Learn: Change Journal Records",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/fileio/change-journal-records"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0041",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Sandbox triage: public submission risk",
+      "layer": "L2",
+      "sector": "finance",
+      "difficulty": "intermediate",
+      "type": "single",
+      "tags": [
+        "sandbox",
+        "malware-triage",
+        "phishing"
+      ],
+      "attack": [
+        "T1566.001",
+        "T1204.002"
+      ],
+      "question": "A macro-enabled workbook sent to a bank's payments team contains a lure sheet listing real customer IBANs. An analyst wants to upload it to a free public online sandbox to speed up triage. What should happen instead?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Search the hash first, then use an internal or private sandbox, because public uploads can be shared"
+        },
+        {
+          "id": "b",
+          "text": "Upload it anyway, because public sandboxes delete each sample as soon as the analysis report is produced"
+        },
+        {
+          "id": "c",
+          "text": "Open it on the analyst's own workstation with macros disabled to read the code quickly without risk"
+        },
+        {
+          "id": "d",
+          "text": "Forward it to all staff as an example so that everyone can recognise the lure if it arrives again"
+        }
+      ],
+      "answer": [
+        "a"
+      ],
+      "explanation": {
+        "correct": "Public analysis services may make submitted files and reports available to other users and partners: VirusTotal, for example, states that the contents of submitted files may be shared with premium customers. Uploading this workbook would disclose customer data, which is a potential personal-data breach in itself, and can tell the attacker, who may watch for their sample, that the lure was caught. Look the hash up first (a lookup sends no content), then analyse in an internal or contracted private sandbox, and record the handling in the case notes.",
+        "distractors": {
+          "b": "Public services keep and share samples; deletion after analysis is not the default and usually needs a separate request.",
+          "c": "Opening live malware on a production workstation risks infection even with macros disabled, and it is not an isolated analysis environment.",
+          "d": "Forwarding the live sample spreads both the malware and the customer data; awareness messages use sanitised screenshots."
+        },
+        "interview_angle": "Balancing triage speed against data protection and operational security in a regulated bank."
+      },
+      "references": [
+        {
+          "title": "VirusTotal docs: How it works",
+          "url": "https://docs.virustotal.com/docs/how-it-works"
+        },
+        {
+          "title": "NIST SP 800-83 Rev. 1: Guide to Malware Incident Prevention and Handling",
+          "url": "https://csrc.nist.gov/pubs/sp/800/83/r1/final"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0042",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Sandbox triage: evasion",
+      "layer": "Engineering",
+      "sector": "tech-vendor",
+      "difficulty": "advanced",
+      "type": "single",
+      "tags": [
+        "sandbox",
+        "malware-triage",
+        "evasion"
+      ],
+      "attack": [
+        "T1497"
+      ],
+      "question": "Your automated triage pipeline marked a loader 'clean'. Its sandbox report shows it slept for about ten minutes, queried the disk size and the network adapter's MAC address, then exited with no network traffic. What should the pipeline engineer change?",
+      "options": [
+        {
+          "id": "a",
+          "text": "Nothing, because a sample that makes no network connection in the sandbox cannot be a working loader"
+        },
+        {
+          "id": "b",
+          "text": "Block every file that calls a sleep function, since long sleeps are a reliable indicator of malware"
+        },
+        {
+          "id": "c",
+          "text": "Raise the sandbox's CPU count, because processor count is the only environment check loaders perform"
+        },
+        {
+          "id": "d",
+          "text": "Treat it as possible sandbox evasion: rerun with a realistic VM, longer runtime and user activity"
+        }
+      ],
+      "answer": [
+        "d"
+      ],
+      "explanation": {
+        "correct": "Long sleeps and checks of disk size, MAC address vendor prefixes, CPU count or user activity are classic virtualisation and sandbox evasion (ATT&CK T1497, with sub-techniques for system checks, user activity checks and time-based evasion). 'No behaviour' is inconclusive, not clean. Re-run with a hardened profile (realistic disk size, non-virtual MAC prefix, longer runtime or sleep acceleration, simulated mouse and document activity), add static and memory analysis, and make the pipeline label such results 'evasive or inconclusive' instead of 'clean'.",
+        "distractors": {
+          "a": "Evasive malware deliberately stays quiet when it suspects analysis; no traffic is exactly what it wants the sandbox to report.",
+          "b": "Legitimate software sleeps all the time; blocking on that alone would cause mass false positives.",
+          "c": "Processor count is one of many checks; this report shows disk-size and MAC checks that a CPU change would not address."
+        },
+        "interview_angle": "Whether you understand sandbox limits and design triage that does not equate silence with safety."
+      },
+      "references": [
+        {
+          "title": "MITRE ATT&CK T1497 Virtualization/Sandbox Evasion",
+          "url": "https://attack.mitre.org/techniques/T1497/"
+        },
+        {
+          "title": "MITRE ATT&CK T1497.001 System Checks",
+          "url": "https://attack.mitre.org/techniques/T1497/001/"
+        }
+      ],
+      "source_type": "framework",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0043",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Memory versus disk evidence",
+      "layer": "L1",
+      "sector": "general",
+      "difficulty": "basic",
+      "type": "multi",
+      "tags": [
+        "memory-forensics",
+        "volatile-data"
+      ],
+      "question": "Which THREE kinds of evidence can a memory capture of a running laptop provide that a disk image taken after shutdown usually cannot? (Choose three.)",
+      "options": [
+        {
+          "id": "a",
+          "text": "Network connections open at capture time, with the owning process"
+        },
+        {
+          "id": "b",
+          "text": "Prefetch files recording the programs that ran on the laptop last week"
+        },
+        {
+          "id": "c",
+          "text": "Code injected into a running process that has no file on disk"
+        },
+        {
+          "id": "d",
+          "text": "MFT records of files deleted yesterday"
+        },
+        {
+          "id": "e",
+          "text": "Keys of an encrypted volume that is currently unlocked"
+        }
+      ],
+      "answer": [
+        "a",
+        "c",
+        "e"
+      ],
+      "explanation": {
+        "correct": "RAM holds the live state of the system: open network connections with their owning process (a netscan-style plugin lists them), code injected into processes or loaded only in memory (fileless malware), decrypted data, and the keys of encrypted volumes that are mounted and unlocked. All of this is lost at shutdown, apart from fragments that may land in pagefile.sys or hiberfil.sys. Prefetch files and $MFT records live on disk and survive a normal shutdown, so the disk image already contains them. This is why memory is captured first on a running system.",
+        "distractors": {
+          "b": "Prefetch files live in C:\\Windows\\Prefetch on disk and are collected in the disk image.",
+          "d": "Deleted-file records stay in the $MFT on disk until reused, so the disk image captures them."
+        },
+        "interview_angle": "Explaining why memory is captured before a system is powered off."
+      },
+      "references": [
+        {
+          "title": "NIST SP 800-86: Integrating Forensic Techniques into Incident Response",
+          "url": "https://csrc.nist.gov/pubs/sp/800/86/final"
+        },
+        {
+          "title": "Volatility 3 docs: Windows plugins",
+          "url": "https://volatility3.readthedocs.io/en/latest/volatility3.plugins.windows.html"
+        }
+      ],
+      "source_type": "framework",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0044",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "USB exfiltration: proving a write",
+      "layer": "L3",
+      "sector": "finance",
+      "difficulty": "advanced",
+      "type": "multi",
+      "tags": [
+        "usb",
+        "exfiltration",
+        "insider-threat"
+      ],
+      "attack": [
+        "T1052.001"
+      ],
+      "question": "A bank is investigating whether a departing relationship manager copied a client portfolio file to a USB stick, which security has now seized. Which TWO sources can show the file being written to the stick, rather than only that the stick was connected or browsed? (Choose two.)",
+      "options": [
+        {
+          "id": "a",
+          "text": "The USBSTOR key showing the stick's last connection time during the employee's final working day"
+        },
+        {
+          "id": "b",
+          "text": "Endpoint DLP or EDR telemetry recording a file copy or write to removable media"
+        },
+        {
+          "id": "c",
+          "text": "A LNK file in the user's Recent folder pointing to E:\\Clients\\portfolio.xlsx"
+        },
+        {
+          "id": "d",
+          "text": "The seized stick's own file-system entry for portfolio.xlsx, created during that session"
+        },
+        {
+          "id": "e",
+          "text": "A ShellBags entry showing that the user browsed E:\\Clients in File Explorer"
+        }
+      ],
+      "answer": [
+        "b",
+        "d"
+      ],
+      "explanation": {
+        "correct": "Host registry and shell artefacts show connection (USBSTOR, MountedDevices, MountPoints2), browsing (ShellBags) or opening (LNK files, Jump Lists), but none of them records a write. Two sources can. First, endpoint telemetry that logs file activity to removable media: Microsoft Purview Endpoint DLP, for example, can audit 'Copy to USB removable device' for protected files. Second, the stick itself: imaged with a write blocker, its file system shows portfolio.xlsx with a creation time that, after a normal Windows copy, reflects when it was written there, while the modified time is carried over from the source. Compare the file's hash with the original on the bank's share. If the 'Audit Removable Storage' policy was enabled, Security log object-access events (4663) on the removable volume can add a third, host-side record of the write.",
+        "distractors": {
+          "a": "USBSTOR proves the device was connected, not what was written to it.",
+          "c": "A Recent LNK shows the file was opened from E:, so it existed on the stick, but not that this workstation wrote it there.",
+          "e": "ShellBags show that a folder was viewed; they say nothing about files written into it."
+        },
+        "interview_angle": "Distinguishing connection, browsing and opening from actual data transfer when the stakes are an insider case."
+      },
+      "references": [
+        {
+          "title": "MITRE ATT&CK T1052.001 Exfiltration over USB",
+          "url": "https://attack.mitre.org/techniques/T1052/001/"
+        },
+        {
+          "title": "Microsoft Learn: Learn about Endpoint DLP",
+          "url": "https://learn.microsoft.com/en-us/purview/endpoint-dlp-learn-about"
+        },
+        {
+          "title": "Elcomsoft: USB device forensics on Windows 10 and 11",
+          "url": "https://blog.elcomsoft.com/2026/02/usb-device-forensics-on-windows-10-and-11/"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0045",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Recovering names of deleted files",
+      "layer": "L3",
+      "sector": "mssp-consulting",
+      "difficulty": "intermediate",
+      "type": "multi",
+      "tags": [
+        "usn-journal",
+        "mft",
+        "deleted-files",
+        "staging"
+      ],
+      "attack": [
+        "T1070.004",
+        "T1074.001"
+      ],
+      "question": "At a client, an attacker emptied a staging folder of compressed archives, C:\\PerfLogs\\stage\\, with Shift+Delete yesterday. Which TWO artefacts on the C: volume may still reveal the deleted archive names? (Choose two.)",
+      "options": [
+        {
+          "id": "a",
+          "text": "$I files in C:\\$Recycle.Bin\\<SID>\\ for the attacker's account"
+        },
+        {
+          "id": "b",
+          "text": "$UsnJrnl:$J records with a FileDelete reason for those names"
+        },
+        {
+          "id": "c",
+          "text": "Security log 4624 events for the account that was logged on at the time"
+        },
+        {
+          "id": "d",
+          "text": "$MFT records marked not in use that still hold a $FILE_NAME attribute"
+        },
+        {
+          "id": "e",
+          "text": "UserAssist entries in the attacker account's NTUSER.DAT"
+        }
+      ],
+      "answer": [
+        "b",
+        "d"
+      ],
+      "explanation": {
+        "correct": "Shift+Delete bypasses the Recycle Bin, so there are no $I and $R pairs. NTFS still remembers. The USN change journal ($Extend\\$UsnJrnl:$J) logs each file's name, parent folder reference, time and reason flags such as FileCreate, RenameNewName and FileDelete, as long as the journal has not wrapped; it is size-limited, so collect it quickly. The $MFT record of each deleted file is only marked free, and until it is reused it keeps the $FILE_NAME attribute (name, parent, timestamps). Parse both from a forensic image, for example with MFTECmd, and build a timeline of the staging activity.",
+        "distractors": {
+          "a": "Shift+Delete removes files without moving them to the Recycle Bin, so no $I metadata files are created.",
+          "c": "Event 4624 records logons, not file names; object-access auditing (4663) would be needed, and only if it was configured for that folder.",
+          "e": "UserAssist records programs launched through Explorer, not files that were deleted."
+        }
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: Change Journal Records",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/fileio/change-journal-records"
+        },
+        {
+          "title": "Microsoft Learn: Master File Table",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/fileio/master-file-table"
+        },
+        {
+          "title": "MITRE ATT&CK T1070.004 File Deletion",
+          "url": "https://attack.mitre.org/techniques/T1070/004/"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0046",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Order of volatility",
+      "layer": "L1",
+      "sector": "general",
+      "difficulty": "basic",
+      "type": "ordering",
+      "tags": [
+        "order-of-volatility",
+        "evidence-collection"
+      ],
+      "question": "Order these evidence sources from most volatile to least volatile, following the order of volatility in RFC 3227.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Data on the local disk"
+        },
+        {
+          "id": "b",
+          "text": "CPU registers and cache"
+        },
+        {
+          "id": "c",
+          "text": "Remote logging and monitoring data"
+        },
+        {
+          "id": "d",
+          "text": "Routing table, ARP cache, process table and memory"
+        },
+        {
+          "id": "e",
+          "text": "Archival media such as backup tapes"
+        },
+        {
+          "id": "f",
+          "text": "Temporary file systems"
+        }
+      ],
+      "answer": [
+        "b",
+        "d",
+        "f",
+        "a",
+        "c",
+        "e"
+      ],
+      "explanation": {
+        "correct": "RFC 3227 tells collectors to start with the evidence that disappears first: registers and cache, then the routing table, ARP cache, process table, kernel statistics and memory, then temporary file systems, then disk, then remote logging and monitoring data, then physical configuration and network topology, and finally archival media. In practice an analyst cannot read CPU registers directly, so the first real step on a running system is a memory capture, before anything that changes or powers off the host. Remote logs rank below the local disk because they sit on separate systems with their own retention.",
+        "distractors": {},
+        "interview_angle": "Whether you can justify collection order instead of reciting it."
+      },
+      "references": [
+        {
+          "title": "RFC 3227: Guidelines for Evidence Collection and Archiving",
+          "url": "https://www.rfc-editor.org/rfc/rfc3227"
+        }
+      ],
+      "source_type": "framework",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0047",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Live acquisition sequence",
+      "layer": "L3",
+      "sector": "mssp-consulting",
+      "difficulty": "intermediate",
+      "type": "ordering",
+      "tags": [
+        "acquisition",
+        "chain-of-custody",
+        "memory-forensics"
+      ],
+      "question": "An MSSP responder arrives at a client's running workstation suspected of compromise, and the client has approved a full forensic collection. Put the steps in the correct order.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Compute the image hash and verify it against the acquisition hash"
+        },
+        {
+          "id": "b",
+          "text": "Capture physical memory to external forensic media"
+        },
+        {
+          "id": "c",
+          "text": "Record the system time, screen state and who is present in the chain-of-custody notes"
+        },
+        {
+          "id": "d",
+          "text": "Analyse a working copy of the image, never the original"
+        },
+        {
+          "id": "e",
+          "text": "Acquire a forensic image of the disk"
+        }
+      ],
+      "answer": [
+        "c",
+        "b",
+        "e",
+        "a",
+        "d"
+      ],
+      "explanation": {
+        "correct": "Document first, without touching the system: note the system time against a reference clock, what is on screen and who is present, and open the chain-of-custody record. Then capture RAM, the most volatile evidence, to external media with a trusted tool (writing to the suspect disk would overwrite evidence). Next acquire the disk image, live or after shutdown with a write blocker depending on encryption and the agreed plan. Hash the image, verify it matches the acquisition hash and record it in the custody log, and only then analyse a working copy so the original stays untouched.",
+        "distractors": {},
+        "interview_angle": "Showing you protect evidence integrity and volatility under time pressure at a client site."
+      },
+      "references": [
+        {
+          "title": "NIST SP 800-86: Integrating Forensic Techniques into Incident Response",
+          "url": "https://csrc.nist.gov/pubs/sp/800/86/final"
+        },
+        {
+          "title": "RFC 3227: Guidelines for Evidence Collection and Archiving",
+          "url": "https://www.rfc-editor.org/rfc/rfc3227"
+        }
+      ],
+      "source_type": "framework",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0048",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Malware triage workflow",
+      "layer": "Engineering",
+      "sector": "tech-vendor",
+      "difficulty": "intermediate",
+      "type": "ordering",
+      "tags": [
+        "malware-triage",
+        "sandbox",
+        "ioc"
+      ],
+      "question": "You are designing the triage workflow for suspicious files collected by an EDR product. Put the steps in a sound order.",
+      "options": [
+        {
+          "id": "a",
+          "text": "Detonate the sample in an isolated sandbox restored from a clean snapshot"
+        },
+        {
+          "id": "b",
+          "text": "Look up the file hash in internal and threat-intelligence sources without uploading the file"
+        },
+        {
+          "id": "c",
+          "text": "Turn the confirmed indicators into detections and hunt for them across the estate"
+        },
+        {
+          "id": "d",
+          "text": "Run static triage: true file type, strings, imports, signature and packer checks"
+        },
+        {
+          "id": "e",
+          "text": "Review the sandbox report: process tree, network activity, files and registry keys changed"
+        }
+      ],
+      "answer": [
+        "b",
+        "d",
+        "a",
+        "e",
+        "c"
+      ],
+      "explanation": {
+        "correct": "Start with what is cheapest and discloses nothing: a hash lookup can settle a known sample in seconds without sharing the file. Static triage comes next (true file type, strings, imports, digital signature, packing) and tells you what to expect and how to configure detonation. Then run the sample in an isolated sandbox reverted to a clean snapshot, and review its behaviour: process tree, network connections, dropped files, registry and persistence changes. Only then convert the confirmed indicators (hashes, domains, mutexes, behaviours) into detections and hunt across all endpoints for other infections.",
+        "distractors": {}
+      },
+      "references": [
+        {
+          "title": "NIST SP 800-83 Rev. 1: Guide to Malware Incident Prevention and Handling",
+          "url": "https://csrc.nist.gov/pubs/sp/800/83/r1/final"
+        },
+        {
+          "title": "VirusTotal docs: How it works",
+          "url": "https://docs.virustotal.com/docs/how-it-works"
+        }
+      ],
+      "source_type": "framework",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0049",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Memory analysis plugins by purpose",
+      "layer": "L3",
+      "sector": "tech-vendor",
+      "difficulty": "intermediate",
+      "type": "matching",
+      "tags": [
+        "volatility",
+        "memory-forensics"
+      ],
+      "question": "Match each Volatility-style memory analysis plugin to its purpose.",
+      "options": {
+        "left": [
+          {
+            "id": "l1",
+            "text": "malfind"
+          },
+          {
+            "id": "l2",
+            "text": "netscan"
+          },
+          {
+            "id": "l3",
+            "text": "cmdline"
+          },
+          {
+            "id": "l4",
+            "text": "dlllist"
+          },
+          {
+            "id": "l5",
+            "text": "hashdump"
+          }
+        ],
+        "right": [
+          {
+            "id": "r1",
+            "text": "Show the arguments each process was started with"
+          },
+          {
+            "id": "r2",
+            "text": "Recover processes that already exited by scanning for process structures"
+          },
+          {
+            "id": "r3",
+            "text": "Flag executable, writable process memory with no file behind it"
+          },
+          {
+            "id": "r4",
+            "text": "Recover local account password hashes from registry hives in memory"
+          },
+          {
+            "id": "r5",
+            "text": "List network endpoints and connections with the owning process"
+          },
+          {
+            "id": "r6",
+            "text": "List the modules each process loaded, from its own loader list"
+          }
+        ]
+      },
+      "answer": {
+        "l1": "r3",
+        "l2": "r5",
+        "l3": "r1",
+        "l4": "r6",
+        "l5": "r4"
+      },
+      "explanation": {
+        "correct": "In Volatility 3 these are windows.malfind (also exposed under windows.malware.malfind in recent releases), windows.netscan, windows.cmdline, windows.dlllist and windows.hashdump. malfind looks for memory regions that are private (not backed by a file) with execute and write permissions, a common sign of injected code. netscan scans for TCP and UDP endpoint objects and reports their owning process. cmdline reads each process's command line from its PEB. dlllist walks the loader's module list in the PEB, so a DLL unlinked by malware can be missing there (compare with ldrmodules). hashdump reads the SAM and SYSTEM hives cached in memory. The unused description, finding exited processes, belongs to psscan.",
+        "distractors": {
+          "l4": "dlllist trusts the process's own loader list, so it is not the plugin that finds hidden or injected code; that is malfind or ldrmodules."
+        },
+        "interview_angle": "Knowing which question each memory plugin answers, so you can plan an analysis instead of running everything."
+      },
+      "references": [
+        {
+          "title": "Volatility 3 docs: Windows plugins",
+          "url": "https://volatility3.readthedocs.io/en/latest/volatility3.plugins.windows.html"
+        },
+        {
+          "title": "Volatility 3 docs: windows.malfind",
+          "url": "https://volatility3.readthedocs.io/en/latest/volatility3.plugins.windows.malfind.html"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0050",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Registry MRU lists",
+      "layer": "L2",
+      "sector": "mssp-consulting",
+      "difficulty": "basic",
+      "type": "matching",
+      "tags": [
+        "registry",
+        "mru",
+        "user-activity"
+      ],
+      "question": "Match each NTUSER.DAT key to the user activity it records.",
+      "options": {
+        "left": [
+          {
+            "id": "l1",
+            "text": "RunMRU"
+          },
+          {
+            "id": "l2",
+            "text": "TypedPaths"
+          },
+          {
+            "id": "l3",
+            "text": "WordWheelQuery"
+          },
+          {
+            "id": "l4",
+            "text": "ComDlg32\\LastVisitedPidlMRU"
+          },
+          {
+            "id": "l5",
+            "text": "RecentDocs"
+          }
+        ],
+        "right": [
+          {
+            "id": "r1",
+            "text": "Search terms typed into File Explorer's search box"
+          },
+          {
+            "id": "r2",
+            "text": "Commands typed into the Win+R Run dialog"
+          },
+          {
+            "id": "r3",
+            "text": "Programs launched from the Start menu, with run counts"
+          },
+          {
+            "id": "r4",
+            "text": "Paths typed into File Explorer's address bar"
+          },
+          {
+            "id": "r5",
+            "text": "Files and folders recently opened through the shell, also listed per extension"
+          },
+          {
+            "id": "r6",
+            "text": "The program that used an Open/Save dialog and the folder it last used there"
+          }
+        ]
+      },
+      "answer": {
+        "l1": "r2",
+        "l2": "r4",
+        "l3": "r1",
+        "l4": "r6",
+        "l5": "r5"
+      },
+      "explanation": {
+        "correct": "All five live under NTUSER.DAT\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\, which makes them per-user evidence. RunMRU keeps commands typed in the Run dialog (useful for spotting cmd, powershell or \\\\host\\share entries). TypedPaths keeps paths typed in the Explorer address bar, showing deliberate navigation. WordWheelQuery keeps Explorer search terms, which can reveal intent (for example 'salary' or 'passwords'). LastVisitedPidlMRU ties an executable to the folder it last used in a common Open/Save dialog. RecentDocs lists recently opened files and folders, with a subkey per extension. The unused description, Start-menu launches with run counts, is UserAssist.",
+        "distractors": {
+          "l4": "LastVisitedPidlMRU stores the application and folder, not the individual file; the selected file names are in OpenSavePidlMRU."
+        }
+      },
+      "references": [
+        {
+          "title": "Binalyze KB: RunMRU",
+          "url": "https://kb.binalyze.com/air/features/acquisition/supported-evidence/windows-collections-detail/runmru"
+        },
+        {
+          "title": "Binalyze KB: LastVisitedPidlMRU",
+          "url": "https://kb.binalyze.com/air/features/acquisition/supported-evidence/windows-collections-detail/lastvisitedpidlmru"
+        },
+        {
+          "title": "Binalyze KB: RecentDocs",
+          "url": "https://kb.binalyze.com/air/features/acquisition/supported-evidence/windows-collections-detail/recentdocs"
+        }
+      ],
+      "source_type": "tool-docs",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0051",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Prefetch: cloud exfiltration tool",
+      "layer": "L3",
+      "sector": "finance",
+      "difficulty": "advanced",
+      "type": "log-analysis",
+      "tags": [
+        "prefetch",
+        "exfiltration",
+        "cloud-upload"
+      ],
+      "attack": [
+        "T1567.002"
+      ],
+      "question": "A bank's insider-risk team recovered this Prefetch record from a portfolio manager's workstation. Which conclusion does it support?",
+      "context": "Parsed Prefetch file (times UTC)\nSource file   : C:\\Windows\\Prefetch\\RCLONE.EXE-7C1D9A42.pf\nExecutable    : RCLONE.EXE\nRun count     : 3\nLast run      : 2026-09-18 19:42:07\nPrevious runs : 2026-09-18 19:05:51, 2026-09-17 22:13:30\nVolume 0      : \\VOLUME{01d7f3a2b4c5d6e7-5e2a91c0}  serial 5E2A91C0\nDirectories referenced (excerpt):\n  \\VOLUME{01d7f3a2b4c5d6e7-5e2a91c0}\\USERS\\PUBLIC\\TOOLS\n  \\VOLUME{01d7f3a2b4c5d6e7-5e2a91c0}\\USERS\\M.IONESCU\\APPDATA\\ROAMING\\RCLONE\n  \\VOLUME{01d7f3a2b4c5d6e7-5e2a91c0}\\WINDOWS\\SYSTEM32\nFiles referenced (excerpt):\n  \\VOLUME{01d7f3a2b4c5d6e7-5e2a91c0}\\USERS\\PUBLIC\\TOOLS\\RCLONE.EXE\n  \\VOLUME{01d7f3a2b4c5d6e7-5e2a91c0}\\USERS\\M.IONESCU\\APPDATA\\ROAMING\\RCLONE\\RCLONE.CONF\n  \\VOLUME{01d7f3a2b4c5d6e7-5e2a91c0}\\WINDOWS\\SYSTEM32\\KERNEL32.DLL",
+      "options": [
+        {
+          "id": "a",
+          "text": "Client files were uploaded to cloud storage on 17 and 18 September, so the exfiltration itself is now proven"
+        },
+        {
+          "id": "b",
+          "text": "It ran three times from Users\\Public\\Tools and read a config in m.ionescu's profile; upload is unproven"
+        },
+        {
+          "id": "c",
+          "text": "It was started from a USB stick, because the record lists a volume with its own serial number"
+        },
+        {
+          "id": "d",
+          "text": "The three times are file-modification times of RCLONE.EXE, so the record does not establish execution"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "Prefetch is strong execution evidence: RCLONE.EXE ran three times, at the listed UTC times, from \\USERS\\PUBLIC\\TOOLS, and in its first seconds it read RCLONE.CONF under m.ionescu's AppData, where rclone keeps its configured remotes. That makes exfiltration to cloud storage (ATT&CK T1567.002) a strong hypothesis, but Prefetch records no network activity, destination or data volume. Prove the transfer with proxy or firewall logs (bytes out to the cloud provider at those times), the remote definitions in rclone.conf and any cloud-side logs; attribute the account with logon, 4688 or EDR records, because Prefetch itself holds no user.",
+        "distractors": {
+          "a": "Execution is not transfer; nothing in Prefetch shows what was sent, where, or whether it succeeded.",
+          "c": "The same volume GUID and serial also hold \\WINDOWS\\SYSTEM32, so this is the system volume, not removable media.",
+          "d": "These are run times recorded by the prefetcher; the file-modification-time trap belongs to ShimCache."
+        },
+        "interview_angle": "Separating evidence of execution from evidence of exfiltration, and knowing what to collect next."
+      },
+      "references": [
+        {
+          "title": "MITRE ATT&CK T1567.002 Exfiltration to Cloud Storage",
+          "url": "https://attack.mitre.org/techniques/T1567/002/"
+        },
+        {
+          "title": "Belkasoft: Windows Prefetch forensics",
+          "url": "https://belkasoft.com/windows-prefetch-forensics"
+        }
+      ],
+      "source_type": "original",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0052",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "$MFT: detecting timestomping",
+      "layer": "L3",
+      "sector": "mssp-consulting",
+      "difficulty": "advanced",
+      "type": "log-analysis",
+      "tags": [
+        "mft",
+        "timestomp",
+        "timeline"
+      ],
+      "attack": [
+        "T1070.006"
+      ],
+      "question": "An MSSP analyst reviewing a client server pulls this $MFT entry for a DLL flagged by threat hunting. What is the most defensible reading?",
+      "context": "Parsed $MFT entry 104233 (times UTC)\nPath: C:\\ProgramData\\Microsoft\\Crypto\\wmsvc.dll\n\nAttribute       Created                      Modified                     Record changed               Accessed\n$STANDARD_INFO  2019-03-12 08:00:00.0000000  2019-03-12 08:00:00.0000000  2026-10-02 23:14:09.5521734  2019-03-12 08:00:00.0000000\n$FILE_NAME      2026-10-02 23:13:47.1180924  2026-10-02 23:13:47.1180924  2026-10-02 23:13:47.1180924  2026-10-02 23:13:47.1180924",
+      "options": [
+        {
+          "id": "a",
+          "text": "The DLL has existed since 2019, and Windows refreshes the $FILE_NAME times every time the file is read"
+        },
+        {
+          "id": "b",
+          "text": "The entry is corrupt, because $STANDARD_INFORMATION and $FILE_NAME times must always be identical"
+        },
+        {
+          "id": "c",
+          "text": "The Record changed time of 23:14:09 is when a user last opened the DLL, so someone loaded it at that time"
+        },
+        {
+          "id": "d",
+          "text": "It arrived at about 23:13:47 on 2 October 2026 and its $SI times were set back later; 2019 is unreliable"
+        }
+      ],
+      "answer": [
+        "d"
+      ],
+      "explanation": {
+        "correct": "$STANDARD_INFORMATION timestamps can be set from user mode (for example with the SetFileTime API), which is how timestomping tools work; $FILE_NAME timestamps are maintained by the NTFS driver and are much harder to change. Here $FILE_NAME says the file was created at 23:13:47 on 2 October 2026, $SI claims 2019 with zeroed sub-second values, and the $SI record-changed time, 22 seconds after creation, shows when the metadata was rewritten. That pattern fits timestomping (ATT&CK T1070.006). Corroborate before concluding: look for a BasicInfoChange record in $UsnJrnl at 23:14:09 and for the process that wrote the file, since extraction from an archive can also leave old $SI times.",
+        "distractors": {
+          "a": "NTFS does not update $FILE_NAME times when a file is read; they are set at creation and by certain operations such as rename or move.",
+          "b": "$SI and $FN often differ after normal file operations; a mismatch is a lead, not corruption.",
+          "c": "The record-changed time marks a change to the MFT entry's metadata, not an open or a load."
+        },
+        "interview_angle": "Spotting timestomping from $SI versus $FN, and knowing how to corroborate it before reporting."
+      },
+      "references": [
+        {
+          "title": "MITRE ATT&CK T1070.006 Timestomp",
+          "url": "https://attack.mitre.org/techniques/T1070/006/"
+        },
+        {
+          "title": "Microsoft Learn: File Times",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/sysinfo/file-times"
+        },
+        {
+          "title": "Forensics Wiki: Timestomp",
+          "url": "https://forensics.wiki/timestomp/"
+        }
+      ],
+      "source_type": "original",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0053",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "$UsnJrnl: rename, archive and delete",
+      "layer": "L3",
+      "sector": "finance",
+      "difficulty": "advanced",
+      "type": "log-analysis",
+      "tags": [
+        "usn-journal",
+        "exfiltration",
+        "anti-forensics"
+      ],
+      "attack": [
+        "T1036.008",
+        "T1560.001",
+        "T1070.004"
+      ],
+      "question": "A bank's DLP team suspects an analyst hid client data before leaving. What does this journal excerpt show?",
+      "context": "$UsnJrnl:$J parsed (times UTC), parent folder C:\\Users\\a.pop\\Documents\\Work\nTime                 Entry  Name                 Reasons\n2026-10-14 17:02:11  88412  Q3_HNW_clients.xlsx  RenameOldName\n2026-10-14 17:02:11  88412  holiday_2019.jpg     RenameNewName\n2026-10-14 17:02:11  88412  holiday_2019.jpg     RenameNewName|Close\n2026-10-14 17:03:40  90117  photos.7z            FileCreate\n2026-10-14 17:03:52  90117  photos.7z            FileCreate|DataExtend|Close\n2026-10-14 17:09:05  90117  photos.7z            FileDelete|Close\n2026-10-14 17:09:06  88412  holiday_2019.jpg     FileDelete|Close",
+      "options": [
+        {
+          "id": "a",
+          "text": "The spreadsheet was renamed to a .jpg, an archive was created and filled, and both were deleted outright at 17:09"
+        },
+        {
+          "id": "b",
+          "text": "The spreadsheet's contents were copied into photos.7z, so the archive certainly contains the client data"
+        },
+        {
+          "id": "c",
+          "text": "Both files were sent to the Recycle Bin at 17:09 and can still be restored from the user's C:\\$Recycle.Bin folder"
+        },
+        {
+          "id": "d",
+          "text": "Two separate new files, Q3_HNW_clients.xlsx and holiday_2019.jpg, were both created at 17:02:11"
+        }
+      ],
+      "answer": [
+        "a"
+      ],
+      "explanation": {
+        "correct": "RenameOldName and RenameNewName on the same MFT entry (88412) in the same second are one rename: Q3_HNW_clients.xlsx became holiday_2019.jpg, giving client data an innocuous image name (ATT&CK T1036.008). An archive, photos.7z, was then created and written (FileCreate, DataExtend), consistent with archiving before exfiltration (T1560.001), and at 17:09 both files were removed with FileDelete. A Recycle Bin deletion would instead appear as a rename into $Recycle.Bin, so this was a permanent delete (T1070.004). The journal records names and reasons, not content or destination: check 7-Zip execution (Prefetch, Amcache), what happened between 17:03 and 17:09 (browser, proxy and USB artefacts), and try to recover the archive from unallocated space or shadow copies.",
+        "distractors": {
+          "b": "The journal shows that photos.7z was created and written to, not what went into it; only recovering the archive confirms its contents.",
+          "c": "A Recycle Bin deletion shows up as a rename into $Recycle.Bin with $I/$R names, not as FileDelete.",
+          "d": "Old and new names on the same entry in the same second are the two halves of one rename, not two new files."
+        },
+        "interview_angle": "Reading raw journal reason flags into a narrative, while stating what the journal cannot show."
+      },
+      "references": [
+        {
+          "title": "Microsoft Learn: USN_RECORD_V2 structure",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/api/winioctl/ns-winioctl-usn_record_v2"
+        },
+        {
+          "title": "Microsoft Learn: Change Journal Records",
+          "url": "https://learn.microsoft.com/en-us/windows/win32/fileio/change-journal-records"
+        },
+        {
+          "title": "MITRE ATT&CK T1036.008 Masquerade File Type",
+          "url": "https://attack.mitre.org/techniques/T1036/008/"
+        }
+      ],
+      "source_type": "original",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0054",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "USB device identification",
+      "layer": "L3",
+      "sector": "finance",
+      "difficulty": "advanced",
+      "type": "log-analysis",
+      "tags": [
+        "usb",
+        "registry",
+        "exfiltration"
+      ],
+      "attack": [
+        "T1052.001"
+      ],
+      "question": "In a bank data-theft case, security found a 'Generic Flash Disk' stick in the employee's desk drawer. Based on this excerpt from the employee's laptop, how should you link the stick to the laptop?",
+      "context": "SYSTEM hive (laptop assigned to d.marin)\nEnum\\USBSTOR\\Disk&Ven_Generic&Prod_Flash_Disk&Rev_8.07\\7&1f3c9a2&0\n    FriendlyName : Generic Flash Disk USB Device\n\nMountedDevices\n    \\DosDevices\\E:  ->  _??_USBSTOR#Disk&Ven_Generic&Prod_Flash_Disk&Rev_8.07#7&1f3c9a2&0#{53f56307-b6bf-11d0-94f2-00a0c91efb8b}\n    \\??\\Volume{c4a1e6f0-3b2d-11f0-9a1c-806e6f6e6963}  ->  (same data as \\DosDevices\\E:)\n\nNTUSER.DAT (d.marin)\n    Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\MountPoints2\\{c4a1e6f0-3b2d-11f0-9a1c-806e6f6e6963}",
+      "options": [
+        {
+          "id": "a",
+          "text": "Read the stick's hardware serial number and compare it with 7&1f3c9a2, which is the device's serial"
+        },
+        {
+          "id": "b",
+          "text": "Plug the stick into a forensic workstation; if that machine also reports 7&1f3c9a2&0, it is the same stick"
+        },
+        {
+          "id": "c",
+          "text": "Not by serial: the '&' as second character means Windows generated this ID, so match the volume serial"
+        },
+        {
+          "id": "d",
+          "text": "No link can be made, because the '&0' suffix shows the stick was never connected after its first install"
+        }
+      ],
+      "answer": [
+        "c"
+      ],
+      "explanation": {
+        "correct": "A device that reports a unique serial shows it as the USBSTOR instance ID. When the second character is '&', as in 7&1f3c9a2&0, the stick did not report a unique serial and the Plug and Play manager built an ID that is unique only on this system (it can even change with the USB port used), so it cannot be compared with the physical stick or another computer. Link them through the volume instead: image the stick with a write blocker and read its volume serial number, then find that serial in LNK files, Jump Lists or Partition/Diagnostic mount events on the laptop, and combine it with MountedDevices (E:) and MountPoints2 in d.marin's NTUSER.DAT, which show this account had the volume mounted. Reformatting the stick changes the volume serial, so record it before anything else touches the device.",
+        "distractors": {
+          "a": "There is no hardware serial to compare: the '&' marks an ID that Windows generated.",
+          "b": "A generated ID depends on the host and port, so another machine will produce a different value even for the same stick, and connecting it there also writes new artefacts.",
+          "d": "The trailing '&0' is part of the instance ID format, not a connection counter."
+        },
+        "interview_angle": "Knowing when a USB 'serial number' is not evidence of a specific physical device."
+      },
+      "references": [
+        {
+          "title": "Elcomsoft: USB device forensics on Windows 10 and 11",
+          "url": "https://blog.elcomsoft.com/2026/02/usb-device-forensics-on-windows-10-and-11/"
+        },
+        {
+          "title": "Microsoft Learn: Instance ID",
+          "url": "https://learn.microsoft.com/en-us/windows-hardware/drivers/install/instance-ids"
+        },
+        {
+          "title": "Magnet Forensics: Artifact profile, USB devices",
+          "url": "https://www.magnetforensics.com/blog/artifact-profile-usb-devices/"
+        }
+      ],
+      "source_type": "original",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0055",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    },
+    {
+      "subtopic": "Memory analysis: pslist versus psscan",
+      "layer": "L3",
+      "sector": "general",
+      "difficulty": "advanced",
+      "type": "log-analysis",
+      "tags": [
+        "volatility",
+        "memory-forensics",
+        "rootkit"
+      ],
+      "attack": [
+        "T1014"
+      ],
+      "question": "In a memory image, these two processes appear in psscan output but not in pslist. Which reading is most defensible?",
+      "context": "windows.pslist (excerpt)\nPID   PPID  ImageFileName  CreateTime (UTC)     ExitTime\n4     0     System         2026-10-20 07:58:12  N/A\n612   488   services.exe   2026-10-20 07:58:19  N/A\n3120  2984  explorer.exe   2026-10-20 08:04:51  N/A\n\nwindows.psscan (rows with no match in pslist)\nPID   PPID  ImageFileName  CreateTime (UTC)     ExitTime\n5584  3120  cmd.exe        2026-10-20 09:12:03  2026-10-20 09:12:09\n6012  3120  svchost.exe    2026-10-20 09:40:17  N/A",
+      "options": [
+        {
+          "id": "a",
+          "text": "Both are hidden by a rootkit, since any psscan row that is missing from pslist means the process was unlinked"
+        },
+        {
+          "id": "b",
+          "text": "5584 simply exited; 6012 has no exit time, is off the active list and has the wrong parent: examine it"
+        },
+        {
+          "id": "c",
+          "text": "Both are normal leftovers of exited processes, so psscan rows absent from pslist need no further work"
+        },
+        {
+          "id": "d",
+          "text": "6012 is a legitimate service host, because svchost.exe is a standard Windows process image name"
+        }
+      ],
+      "answer": [
+        "b"
+      ],
+      "explanation": {
+        "correct": "pslist walks the kernel's list of active processes (the ActiveProcessLinks in each EPROCESS), while psscan scans memory for process structures, so it also finds processes that have exited and processes unlinked from the list to hide them (direct kernel object manipulation, a rootkit technique, ATT&CK T1014). PID 5584 has an exit time: a short-lived cmd.exe, which is expected to appear only in psscan (its activity is still worth checking). PID 6012 has no exit time, is missing from the active list, and is an svchost.exe whose parent is explorer.exe instead of services.exe (PID 612). Examine it further (malfind, dlllist, handles, netscan) and dump it, and remember psscan can also surface stale structures, so corroborate before declaring a rootkit.",
+        "distractors": {
+          "a": "Exited processes are the most common reason for psscan-only rows, and 5584 has an exit time.",
+          "c": "6012 has no exit time and an anomalous parent; dismissing every psscan-only row would miss hidden processes.",
+          "d": "Malware often reuses system process names; a genuine svchost.exe is started by services.exe, not by explorer.exe."
+        },
+        "interview_angle": "Knowing how two plugins enumerate processes differently and what each difference implies."
+      },
+      "references": [
+        {
+          "title": "Volatility 3 docs: windows.psscan",
+          "url": "https://volatility3.readthedocs.io/en/latest/volatility3.plugins.windows.psscan.html"
+        },
+        {
+          "title": "Volatility 3 docs: windows.pslist",
+          "url": "https://volatility3.readthedocs.io/en/latest/volatility3.plugins.windows.pslist.html"
+        },
+        {
+          "title": "MITRE ATT&CK T1014 Rootkit",
+          "url": "https://attack.mitre.org/techniques/T1014/"
+        }
+      ],
+      "source_type": "original",
+      "domain": "windows-forensics",
+      "id": "windows-forensics-0056",
+      "scenario_id": null,
+      "version": 1,
+      "reviewed": false
+    }
+  ]
 }

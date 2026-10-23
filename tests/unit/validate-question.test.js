@@ -246,3 +246,19 @@ test('log-analysis requires context', () => {
   q.context = '4625 x 40 from 10.0.0.5';
   assert.deepEqual(validateQuestion(q), []);
 });
+
+test('ordering whose options are already in the correct order is rejected', () => {
+  const q = ordering();
+  q.options = [
+    { id: 'a', text: 'Preparation' },
+    { id: 'b', text: 'Detection and analysis' },
+    { id: 'c', text: 'Containment' },
+  ];
+  q.answer = ['a', 'b', 'c'];
+  expectError(q, /already in the correct order/);
+});
+
+test('a shuffled ordering question is still accepted', () => {
+  const q = ordering();
+  assert.deepEqual(validateQuestion(q), []);
+});

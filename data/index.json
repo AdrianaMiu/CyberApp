@@ -1,24 +1,24 @@
 {
-  "bankVersion": "0.0.0",
+  "bankVersion": "2026.10.23.152",
   "target": 800,
   "domains": [
     {
       "id": "dlp",
       "file": "dlp.json",
-      "authored": 0,
-      "served": 0
+      "authored": 84,
+      "served": 25
     },
     {
       "id": "incident-response",
       "file": "incident-response.json",
-      "authored": 0,
-      "served": 0
+      "authored": 120,
+      "served": 30
     },
     {
       "id": "siem",
       "file": "siem.json",
-      "authored": 0,
-      "served": 0
+      "authored": 97,
+      "served": 97
     },
     {
       "id": "cloud-security",
@@ -29,7 +29,7 @@
     {
       "id": "windows-forensics",
       "file": "windows-forensics.json",
-      "authored": 0,
+      "authored": 56,
       "served": 0
     },
     {
@@ -41,7 +41,7 @@
     {
       "id": "soar",
       "file": "soar.json",
-      "authored": 0,
+      "authored": 24,
       "served": 0
     },
     {
